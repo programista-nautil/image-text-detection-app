@@ -35,6 +35,7 @@ export default function App() {
 	const { width } = Dimensions.get('window')
 	const [takePictureActive, setTakePictureActive] = useState(false)
 	const errorRef = useRef(null)
+	const [isSpeaking, setIsSpeaking] = useState(false)
 
 	// Focus on error
 	useEffect(() => {
@@ -356,15 +357,15 @@ export default function App() {
 	}
 
 	const startDetection = async () => {
-		setObjectDetection(null)
-		setLoading(true)
-		if (cameraRef.current) {
-			// Pierwsze wywołanie detekcji natychmiast
+		if (cameraRef.current && !isSpeaking) {
+			setLoading(true)
 			await detectObjects()
 			setLoading(false)
-			// Uruchom interval, który będzie wywoływał funkcję co 15 sekund
+
 			detectionIntervalRef.current = setInterval(async () => {
-				await detectObjects()
+				if (!isSpeaking) {
+					await detectObjects()
+				}
 			}, 5000)
 		}
 	}
@@ -407,6 +408,9 @@ export default function App() {
 						Speech.speak('Wykryto obiekt. Analizuję obraz.')
 						analyzeImage() // Analiza obrazu, jeśli są wykryte obiekty
 					}
+					if (detectionMode === 'all') {
+						await readDetectedObjects(detectionData) // Czekaj na zakończenie mowy
+					}
 				} else {
 					setObjectDetection(null)
 					setError('Nie wykryto obiektów.')
@@ -416,6 +420,25 @@ export default function App() {
 				setError('Error during detection')
 			}
 		}
+	}
+
+	const readDetectedObjects = async detectionData => {
+		return new Promise((resolve, reject) => {
+			const objectNames = detectionData.map(obj => `${obj.name},`).join('. ')
+
+			setIsSpeaking(true) // Oznacz, że zaczynamy czytać
+
+			Speech.speak(objectNames, {
+				onDone: () => {
+					setIsSpeaking(false) // Oznacz, że odczyt się zakończył
+					resolve() // Informuj, że zakończono odczyt
+				},
+				onError: error => {
+					setIsSpeaking(false) // Jeśli błąd, zakończ
+					reject(error) // Informuj o błędzie
+				},
+			})
+		})
 	}
 
 	// Function to stop the real-time detection
