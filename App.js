@@ -99,6 +99,7 @@ export default function App() {
 		if (cameraActive || takePictureActive) {
 			stopDetection()
 			setTakePictureActive(false)
+			setCameraActive(false)
 		}
 		setDetectionMode(newMode) // Set the new detection mode
 	}
@@ -420,6 +421,8 @@ export default function App() {
 	// Function to stop the real-time detection
 	const stopDetection = () => {
 		clearInterval(detectionIntervalRef.current)
+		setLoading(false)
+		setTakePictureActive(false)
 		setCameraActive(false)
 		setImage(null)
 		setResponse(null)
@@ -487,14 +490,20 @@ export default function App() {
 						</TouchableOpacity>
 						<TouchableOpacity
 							style={[styles.modeButton, detectionMode === 'car' ? styles.selectedMode : styles.unselectedMode]}
-							onPress={() => handleModeChange('car')}
-							disabled={loading}>
+							onPress={() => {
+								if (loading) setLoading(false)
+								handleModeChange('car')
+							}}
+							disabled={loading && detectionMode === 'microwave'}>
 							<Text style={styles.modeButtonText}>Tylko samochody</Text>
 						</TouchableOpacity>
 						<TouchableOpacity
 							style={[styles.modeButton, detectionMode === 'microwave' ? styles.selectedMode : styles.unselectedMode]}
-							onPress={() => handleModeChange('microwave')}
-							disabled={loading}>
+							onPress={() => {
+								if (loading) setLoading(false)
+								handleModeChange('microwave')
+							}}
+							disabled={loading && detectionMode === 'car'}>
 							<Text style={styles.modeButtonText}>Wykryj markery</Text>
 						</TouchableOpacity>
 					</View>
@@ -578,8 +587,7 @@ export default function App() {
 										style={styles.removeButton}
 										onPress={stopDetection}
 										accessibilityLabel='Wyłącz aparat'
-										accessibilityRole='button'
-										disabled={loading}>
+										accessibilityRole='button'>
 										<MaterialIcons name='close' size={24} color='white' />
 									</TouchableOpacity>
 								</View>
