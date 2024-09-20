@@ -181,11 +181,11 @@ export default function App() {
 				Speech.speak(message) // Odczytaj wiadomość
 
 				if (markerId === 25) {
-					setResponse({ detectedObject: 'Wykryto laptopa' })
+					setResponse({ detectedObject: 'Wykryto stolik.' })
 				}
 
 				if (markerId === 20) {
-					setResponse({ detectedObject: 'Wykryto laptopa' })
+					setResponse({ detectedObject: 'Wykryto słoik.' })
 				}
 
 				// Jeśli wykryto ekspres do kawy (marker o ID 11), uruchom analizę tekstu
@@ -703,7 +703,7 @@ export default function App() {
 }
 
 const { width } = Dimensions.get('window')
-const { height } = Dimensions.get('window')
+const isSmallScreen = width < 400
 
 const styles = StyleSheet.create({
 	container: {
@@ -723,10 +723,15 @@ const styles = StyleSheet.create({
 	modeButton: {
 		flex: 1,
 		marginHorizontal: 5,
-		padding: 10,
+		padding: isSmallScreen ? 10 : 10, // Zmniejsz rozmiar przycisku dla małych ekranów
 		backgroundColor: '#f0f0f0',
 		borderRadius: 10,
 		alignItems: 'center',
+	},
+	modeButtonText: {
+		color: '#333',
+		fontWeight: 'bold',
+		fontSize: isSmallScreen ? 11 : 16, // Zmniejsz czcionkę dla mniejszych ekranów
 	},
 	selectedMode: {
 		backgroundColor: '#4682B4',
@@ -734,10 +739,6 @@ const styles = StyleSheet.create({
 	unselectedMode: {
 		borderWidth: 2,
 		borderColor: '#4682B4',
-	},
-	modeButtonText: {
-		color: '#333',
-		fontWeight: 'bold',
 	},
 	box: {
 		position: 'absolute',
