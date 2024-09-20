@@ -356,10 +356,11 @@ export default function App() {
 
 	const startDetection = async () => {
 		setObjectDetection(null)
+		setLoading(true)
 		if (cameraRef.current) {
 			// Pierwsze wywołanie detekcji natychmiast
 			await detectObjects()
-
+			setLoading(false)
 			// Uruchom interval, który będzie wywoływał funkcję co 15 sekund
 			detectionIntervalRef.current = setInterval(async () => {
 				await detectObjects()
@@ -370,6 +371,7 @@ export default function App() {
 	const detectObjects = async () => {
 		if (cameraRef.current) {
 			try {
+				setLoading(true)
 				let photo = await cameraRef.current.takePictureAsync()
 				const selectedImage = photo.uri
 				setImage(selectedImage)
@@ -398,7 +400,7 @@ export default function App() {
 
 				if (detectionData.length > 0) {
 					setObjectDetection(detectionData)
-
+					setLoading(false)
 					// W przypadku trybu 'car' lub 'microwave', uruchom analizę obrazu
 					if (detectionMode === 'car' || detectionMode === 'microwave') {
 						Speech.speak('Wykryto obiekt. Analizuję obraz.')
@@ -479,17 +481,20 @@ export default function App() {
 					<View style={styles.modeSelector}>
 						<TouchableOpacity
 							style={[styles.modeButton, detectionMode === 'all' ? styles.selectedMode : styles.unselectedMode]}
-							onPress={() => handleModeChange('all')}>
+							onPress={() => handleModeChange('all')}
+							disabled={loading}>
 							<Text style={styles.modeButtonText}>Wszystkie obiekty</Text>
 						</TouchableOpacity>
 						<TouchableOpacity
 							style={[styles.modeButton, detectionMode === 'car' ? styles.selectedMode : styles.unselectedMode]}
-							onPress={() => handleModeChange('car')}>
+							onPress={() => handleModeChange('car')}
+							disabled={loading}>
 							<Text style={styles.modeButtonText}>Tylko samochody</Text>
 						</TouchableOpacity>
 						<TouchableOpacity
 							style={[styles.modeButton, detectionMode === 'microwave' ? styles.selectedMode : styles.unselectedMode]}
-							onPress={() => handleModeChange('microwave')}>
+							onPress={() => handleModeChange('microwave')}
+							disabled={loading}>
 							<Text style={styles.modeButtonText}>Wykryj markery</Text>
 						</TouchableOpacity>
 					</View>
@@ -500,7 +505,8 @@ export default function App() {
 								onPress={pickImage}
 								style={styles.button}
 								icon='image'
-								disabled={loading || cameraActive}>
+								disabled={loading || cameraActive}
+								accessibilityRole='button'>
 								Wybierz z galerii
 							</Button>
 						)}
@@ -517,7 +523,8 @@ export default function App() {
 								icon='camera'
 								disabled={loading || cameraActive || takePictureActive}
 								importantForAccessibility={loading ? 'no-hide-descendants' : 'yes'}
-								accessibilityElementsHidden={loading ? true : false}>
+								accessibilityElementsHidden={loading ? true : false}
+								accessibilityRole='button'>
 								Otwórz aparat
 							</Button>
 						)}
@@ -527,7 +534,8 @@ export default function App() {
 								onPress={() => setCameraActive(true)}
 								style={styles.button}
 								icon='camera'
-								disabled={loading || takePictureActive}>
+								disabled={loading || takePictureActive}
+								accessibilityRole='button'>
 								Wykryj obiekty
 							</Button>
 						)}
@@ -557,6 +565,7 @@ export default function App() {
 						<>
 							<Camera style={styles.camera} ref={cameraRef} onCameraReady={startDetection}>
 								{objectDetection &&
+									Platform.OS === 'ios' &&
 									objectDetection.slice(0, detectionMode === 'all' ? 4 : 1).map((obj, index) => (
 										<View key={index} style={[styles.box, scaleBox(obj.box)]}>
 											<View style={styles.labelContainer}>
@@ -654,11 +663,21 @@ export default function App() {
 					{loading && (
 						<ActivityIndicator animating={true} size='large' style={styles.activityIndicator} color='#4682B4' />
 					)}
+					{detectionMode === 'all' && objectDetection && cameraActive && loading === false && (
+						<View>
+							<Text style={styles.responseText}>Wykryte obiekty:</Text>
+							{objectDetection.slice(0, 4).map((obj, index) => (
+								<Text key={index} style={styles.responseText}>
+									{obj.name} - {Math.round(obj.confidence * 100)}% pewności
+								</Text>
+							))}
+						</View>
+					)}
 					{response && (
 						<View style={styles.responseContainer}>
 							<Card style={styles.responseCard}>
 								<Card.Content>
-									{detectionMode === 'microwave' ? (
+									{detectionMode === 'microwave' && (
 										<View style={styles.responseRow}>
 											{response.detectedText && (
 												<>
@@ -678,7 +697,9 @@ export default function App() {
 												<Text style={[styles.responseText, { textAlign: 'center' }]}>{response.detectedObject}</Text>
 											)}
 										</View>
-									) : (
+									)}
+
+									{detectionMode === 'car' && (
 										<>
 											{response.data ? (
 												<>
