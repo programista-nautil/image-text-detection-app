@@ -122,7 +122,7 @@ export default function App() {
 	const pickImage = async () => {
 		let result = await ImagePicker.launchImageLibraryAsync({
 			mediaTypes: ImagePicker.MediaTypeOptions.Images,
-			allowsEditing: true,
+			allowsEditing: false,
 			quality: 1,
 		})
 
@@ -188,6 +188,18 @@ export default function App() {
 				}
 
 				if (markerId === 20) {
+					setResponse({ detectedObject: 'Wykryto słoik.' })
+				}
+
+				if (markerId === 30) {
+					setResponse({ detectedObject: 'Wykryto słoik.' })
+				}
+
+				if (markerId === 35) {
+					setResponse({ detectedObject: 'Wykryto słoik.' })
+				}
+
+				if (markerId === 40) {
 					setResponse({ detectedObject: 'Wykryto słoik.' })
 				}
 
@@ -363,11 +375,14 @@ export default function App() {
 			await detectObjects()
 			setLoading(false)
 
-			detectionIntervalRef.current = setInterval(async () => {
-				if (!isSpeaking) {
-					await detectObjects()
-				}
-			}, 5000)
+			detectionIntervalRef.current = setInterval(
+				async () => {
+					if (!isSpeaking) {
+						await detectObjects()
+					}
+				},
+				Platform.OS === 'ios' ? 5000 : 7000
+			)
 		}
 	}
 
@@ -430,6 +445,7 @@ export default function App() {
 			const limitedDetectionData = detectionData.slice(0, 4)
 			const objectNames = limitedDetectionData.map(obj => `${obj.name}`).join('. ')
 
+			Speech.stop()
 			setIsSpeaking(true) // Oznacz, że zaczynamy czytać
 
 			Speech.speak(objectNames, {
