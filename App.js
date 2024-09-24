@@ -92,6 +92,7 @@ export default function App() {
 
 	const handleModeChange = newMode => {
 		// Usunięcie zdjęcia i danych po zmianie trybu
+		Speech.stop()
 		setImage(null)
 		setResponse(null)
 		setObjectDetection(null)
@@ -197,7 +198,7 @@ export default function App() {
 				}
 			} else {
 				setError('Nie wykryto markera.')
-				Speech.speak('Nie wykryto markera.')
+				//Speech.speak('Nie wykryto markera.')
 			}
 		} catch (error) {
 			console.error('Error during ArUco detection: ', error)
@@ -321,7 +322,7 @@ export default function App() {
 			if (detectObjectsRes.data.length === 0) {
 				const noObjectsMessage = 'Nie wykryto żadnych obiektów na zdjęciu.'
 				setError(noObjectsMessage)
-				Speech.speak(noObjectsMessage)
+				//Speech.speak(noObjectsMessage)
 				setObjectDetection(null)
 				setLoading(false)
 				return
@@ -412,19 +413,22 @@ export default function App() {
 						await readDetectedObjects(detectionData) // Czekaj na zakończenie mowy
 					}
 				} else {
-					setObjectDetection(null)
-					setError('Nie wykryto obiektów.')
+					setObjectDetection([])
+					Speech.speak('Nie wykryto żadnych obiektów.')
 				}
 			} catch (error) {
 				console.error('Error during detection: ', error)
 				setError('Error during detection')
+			} finally {
+				setLoading(false) // Upewnij się, że ładowanie zostaje zatrzymane
 			}
 		}
 	}
 
 	const readDetectedObjects = async detectionData => {
 		return new Promise((resolve, reject) => {
-			const objectNames = detectionData.map(obj => `${obj.name},`).join('. ')
+			const limitedDetectionData = detectionData.slice(0, 4)
+			const objectNames = limitedDetectionData.map(obj => `${obj.name}`).join('. ')
 
 			setIsSpeaking(true) // Oznacz, że zaczynamy czytać
 
@@ -443,6 +447,7 @@ export default function App() {
 
 	// Function to stop the real-time detection
 	const stopDetection = () => {
+		Speech.stop()
 		clearInterval(detectionIntervalRef.current)
 		setLoading(false)
 		setTakePictureActive(false)
@@ -455,6 +460,7 @@ export default function App() {
 
 	// Function to remove image and stop detection
 	const removeImage = () => {
+		Speech.stop()
 		setImage(null)
 		setResponse(null)
 		setObjectDetection(null)
@@ -508,7 +514,9 @@ export default function App() {
 						<TouchableOpacity
 							style={[styles.modeButton, detectionMode === 'all' ? styles.selectedMode : styles.unselectedMode]}
 							onPress={() => handleModeChange('all')}
-							disabled={loading}>
+							disabled={loading}
+							accessibilityLabel='tryb wszystkie obiekty' // Etykieta dla VoiceOver
+							accessibilityRole='button'>
 							<Text style={styles.modeButtonText}>Wszystkie obiekty</Text>
 						</TouchableOpacity>
 						<TouchableOpacity
@@ -517,7 +525,9 @@ export default function App() {
 								if (loading) setLoading(false)
 								handleModeChange('car')
 							}}
-							disabled={loading && detectionMode === 'microwave'}>
+							disabled={loading && detectionMode === 'microwave'}
+							accessibilityLabel='tryb tylko pojazdy' // Etykieta dla VoiceOver
+							accessibilityRole='button'>
 							<Text style={styles.modeButtonText}>Tylko pojazdy</Text>
 						</TouchableOpacity>
 						<TouchableOpacity
@@ -526,7 +536,9 @@ export default function App() {
 								if (loading) setLoading(false)
 								handleModeChange('microwave')
 							}}
-							disabled={loading && detectionMode === 'car'}>
+							disabled={loading && detectionMode === 'car'}
+							accessibilityLabel='tryb wykryj markery' // Etykieta dla VoiceOver
+							accessibilityRole='button'>
 							<Text style={styles.modeButtonText}>Wykryj markery</Text>
 						</TouchableOpacity>
 					</View>
@@ -644,6 +656,8 @@ export default function App() {
 													borderRadius: 15,
 												},
 											]}
+											accessible={true} // Informacja o dostępności
+											accessibilityLabel='' // Etykieta dla VoiceOver
 											resizeMode='contain'
 										/>
 										{objectDetection &&
@@ -696,12 +710,18 @@ export default function App() {
 					)}
 					{detectionMode === 'all' && objectDetection && cameraActive && loading === false && (
 						<View>
-							<Text style={styles.responseText}>Wykryte obiekty:</Text>
-							{objectDetection.slice(0, 4).map((obj, index) => (
-								<Text key={index} style={styles.responseText}>
-									{obj.name} - {Math.round(obj.confidence * 100)}% pewności
-								</Text>
-							))}
+							{objectDetection && objectDetection.length > 0 ? (
+								<View>
+									<Text style={styles.responseText}>Wykryte obiekty:</Text>
+									{objectDetection.slice(0, 4).map((obj, index) => (
+										<Text key={index} style={styles.responseText}>
+											{obj.name} - {Math.round(obj.confidence * 100)}% pewności
+										</Text>
+									))}
+								</View>
+							) : (
+								<Text style={styles.responseText}>Nie wykryto żadnych obiektów na zdjęciu.</Text>
+							)}
 						</View>
 					)}
 					{response && (
@@ -889,7 +909,7 @@ const styles = StyleSheet.create({
 		backgroundColor: 'rgba(255, 0, 0, 0.7)',
 		padding: 5,
 		borderRadius: 15,
-		zIndex: 1,
+		zIndex: 10,
 	},
 	activityIndicator: {
 		marginVertical: 20,
