@@ -5,7 +5,7 @@ import { StyleSheet } from 'react-native'
 const Header = () => {
 	return (
 		<Appbar.Header style={styles.header}>
-			<Appbar.Content title='Aplikacja' titleStyle={styles.headerTitle} />
+			<Appbar.Content title='Analiza zdjęcia' titleStyle={styles.headerTitle} />
 		</Appbar.Header>
 	)
 }

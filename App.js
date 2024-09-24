@@ -112,7 +112,7 @@ export default function App() {
 			case 'car':
 				return 'Tryb wykrywania pojazdów i odczytywania ich tablicy rejestracyjnej i wagi.'
 			case 'microwave':
-				return 'Tryb wykrywania ekspressu do kawy i analizy tekstu na nim.'
+				return 'Tryb wykrywania markerów i analizy tekstu.'
 			default:
 				return 'Aplikacja służy do wykrywania obiektów na zdjęciach oraz analizy ich zawartości.'
 		}
@@ -518,7 +518,7 @@ export default function App() {
 								handleModeChange('car')
 							}}
 							disabled={loading && detectionMode === 'microwave'}>
-							<Text style={styles.modeButtonText}>Tylko samochody</Text>
+							<Text style={styles.modeButtonText}>Tylko pojazdy</Text>
 						</TouchableOpacity>
 						<TouchableOpacity
 							style={[styles.modeButton, detectionMode === 'microwave' ? styles.selectedMode : styles.unselectedMode]}
