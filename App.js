@@ -36,6 +36,12 @@ export default function App() {
 	const [takePictureActive, setTakePictureActive] = useState(false)
 	const errorRef = useRef(null)
 	const [isSpeaking, setIsSpeaking] = useState(false)
+	const [arucoMarkers, setArucoMarkers] = useState({ marker_ids: [], corners: [] })
+
+	const aspectRatio = 4 / 3
+
+	// Oblicz wysokość na podstawie szerokości ekranu i proporcji
+	const cameraHeight = (width / aspectRatio) * 1.5
 
 	// Focus on error
 	useEffect(() => {
@@ -180,6 +186,10 @@ export default function App() {
 
 			// Sprawdzamy, czy wykryto jakiekolwiek markery
 			if (detectRes.data.marker_ids && detectRes.data.marker_ids.length > 0) {
+				setArucoMarkers({
+					marker_ids: detectRes.data.marker_ids || [], // Sprawdzenie, czy dane są zdefiniowane
+					corners: detectRes.data.corners || [], // Sprawdzenie, czy dane są zdefiniowane
+				})
 				// Iterujemy po każdym wykrytym markerze
 				const newResponses = [] // Zmienna do przechowywania wszystkich odpowiedzi
 				detectRes.data.marker_ids.forEach(markerId => {
@@ -523,6 +533,31 @@ export default function App() {
 		}
 	}
 
+	const scaleMarkerBox = corners => {
+		if (!corners || corners.length < 4) return {} // Sprawdzanie, czy mamy wystarczająco dużo narożników
+		if (!imageSize.width || !imageSize.height) return {} // Sprawdzanie poprawności rozmiarów obrazu
+
+		// Obliczanie proporcji obrazu do widoku
+		const imageAspectRatio = imageSize.width / imageSize.height
+		const viewWidth = width - 40
+		const viewHeight = viewWidth / imageAspectRatio // Przeskalowanie wysokości na podstawie szerokości obrazu
+
+		// Obliczanie współczynników skalowania dla szerokości i wysokości
+		const scaleX = viewWidth / imageSize.width
+		const scaleY = viewHeight / imageSize.height
+
+		// Pobieranie poszczególnych narożników
+		const [topLeft, topRight, bottomRight, bottomLeft] = corners
+
+		// Zwracanie przeskalowanej pozycji i rozmiarów markera
+		return {
+			left: topLeft[0] * scaleX,
+			top: topLeft[1] * scaleY,
+			width: (topRight[0] - topLeft[0]) * scaleX,
+			height: (bottomLeft[1] - topLeft[1]) * scaleY,
+		}
+	}
+
 	return (
 		<PaperProvider>
 			<View style={styles.container}>
@@ -621,7 +656,7 @@ export default function App() {
 						)}
 					</View>
 					{takePictureActive && (
-						<Camera style={styles.camera} ref={cameraRef}>
+						<Camera style={{ width: width - 40, height: cameraHeight }} ref={cameraRef}>
 							<View style={styles.cameraButtonContainer}>
 								<Pressable
 									onPress={takePicture}
@@ -643,7 +678,10 @@ export default function App() {
 					)}
 					{cameraActive ? (
 						<>
-							<Camera style={styles.camera} ref={cameraRef} onCameraReady={startDetection}>
+							<Camera
+								style={{ width: width - 40, height: cameraHeight }}
+								ref={cameraRef}
+								onCameraReady={startDetection}>
 								{objectDetection &&
 									Platform.OS === 'ios' &&
 									objectDetection.slice(0, detectionMode === 'all' ? 4 : 1).map((obj, index) => (
@@ -760,56 +798,59 @@ export default function App() {
 							)}
 						</View>
 					)}
-					{response && (response.detectedText || (response.detectedObjects && response.detectedObjects.length > 0)) && (
-						<View style={styles.responseContainer}>
-							<Card style={styles.responseCard}>
-								<Card.Content>
-									{detectionMode === 'microwave' && (
-										<View style={styles.responseRow}>
-											{response.detectedText && (
-												<>
-													<Text style={styles.responseText}>
-														Wykryty tekst: {response.detectedText || 'Brak tekstu'}
-													</Text>
-
-													<TouchableOpacity
-														onPress={() => Speech.speak(response.detectedText)}
-														accessibilityLabel='Powtórz'
-														accessibilityRole='button'>
-														<MaterialIcons name='replay' size={24} color='black' />
-													</TouchableOpacity>
-												</>
-											)}
-											{response?.detectedObjects && response.detectedObjects.length > 0 && (
-												<View>
-													{response.detectedObjects.map((detectedObject, index) => (
-														<Text key={index} style={styles.responseText}>
-															{detectedObject}
+					{response &&
+						(response.data ||
+							response.detectedText ||
+							(response.detectedObjects && response.detectedObjects.length > 0)) && (
+							<View style={styles.responseContainer}>
+								<Card style={styles.responseCard}>
+									<Card.Content>
+										{detectionMode === 'microwave' && (
+											<View style={styles.responseRow}>
+												{response.detectedText && (
+													<>
+														<Text style={styles.responseText}>
+															Wykryty tekst: {response.detectedText || 'Brak tekstu'}
 														</Text>
-													))}
-												</View>
-											)}
-										</View>
-									)}
 
-									{detectionMode === 'car' && (
-										<>
-											{response.data ? (
-												<>
-													<Text style={styles.responseText}>
-														Numer rejestracyjny: {response.data.license_plate || 'Brak danych'}
-													</Text>
-													<Text style={styles.responseText}>Waga: {response.data.weight || 'Brak danych'}</Text>
-												</>
-											) : (
-												<Text style={styles.responseText}>Brak danych do wyświetlenia</Text>
-											)}
-										</>
-									)}
-								</Card.Content>
-							</Card>
-						</View>
-					)}
+														<TouchableOpacity
+															onPress={() => Speech.speak(response.detectedText)}
+															accessibilityLabel='Powtórz'
+															accessibilityRole='button'>
+															<MaterialIcons name='replay' size={24} color='black' />
+														</TouchableOpacity>
+													</>
+												)}
+												{response?.detectedObjects && response.detectedObjects.length > 0 && (
+													<View>
+														{response.detectedObjects.map((detectedObject, index) => (
+															<Text key={index} style={styles.responseText}>
+																{detectedObject}
+															</Text>
+														))}
+													</View>
+												)}
+											</View>
+										)}
+
+										{detectionMode === 'car' && (
+											<>
+												{response.data ? (
+													<>
+														<Text style={styles.responseText}>
+															Numer rejestracyjny: {response.data.license_plate || 'Brak danych'}
+														</Text>
+														<Text style={styles.responseText}>Waga: {response.data.weight || 'Brak danych'}</Text>
+													</>
+												) : (
+													<Text style={styles.responseText}>Brak danych do wyświetlenia</Text>
+												)}
+											</>
+										)}
+									</Card.Content>
+								</Card>
+							</View>
+						)}
 				</ScrollView>
 			</View>
 		</PaperProvider>
@@ -845,7 +886,7 @@ const styles = StyleSheet.create({
 	modeButtonText: {
 		color: '#333',
 		fontWeight: 'bold',
-		fontSize: isSmallScreen ? 11 : 16, // Zmniejsz czcionkę dla mniejszych ekranów
+		fontSize: isSmallScreen ? 13 : 16, // Zmniejsz czcionkę dla mniejszych ekranów
 	},
 	selectedMode: {
 		backgroundColor: '#4682B4',
