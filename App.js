@@ -216,7 +216,6 @@ export default function App() {
 			console.error('Error during ArUco detection: ', error)
 			setError('Error during marker detection')
 			Speech.speak('Wystąpił błąd podczas wykrywania markera.')
-		} finally {
 			setLoading(false)
 		}
 	}
@@ -224,7 +223,6 @@ export default function App() {
 	// Funkcja do analizy tekstu z obrazu
 	const analyzeTextFromImage = async imageUri => {
 		try {
-			setLoading(true)
 			const base64Image = await getBase64(imageUri)
 
 			const data = {
