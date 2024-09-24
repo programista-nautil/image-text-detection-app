@@ -178,39 +178,55 @@ export default function App() {
 				},
 			})
 
-			if (detectRes.data.marker_id) {
-				const markerId = detectRes.data.marker_id
-				const message = detectRes.data.message || `Wykryto marker o numerze ${markerId}`
-				Speech.speak(message) // Odczytaj wiadomość
+			// Sprawdzamy, czy wykryto jakiekolwiek markery
+			if (detectRes.data.marker_ids && detectRes.data.marker_ids.length > 0) {
+				// Iterujemy po każdym wykrytym markerze
+				const newResponses = [] // Zmienna do przechowywania wszystkich odpowiedzi
+				detectRes.data.marker_ids.forEach(markerId => {
+					// Dodajemy odpowiedzi dla każdego markera do tablicy
+					if (markerId === 25) {
+						let message = 'Wykryto stolik.'
+						newResponses.push(message)
+						Speech.speak(message)
+						setLoading(false)
+					} else if (markerId === 20) {
+						let message = 'Wykryto słoik.'
+						newResponses.push(message)
+						Speech.speak(message)
+						setLoading(false)
+					} else if (markerId === 30) {
+						let message = 'Wykryto stojak.'
+						newResponses.push(message)
+						Speech.speak(message)
+						setLoading(false)
+					} else if (markerId === 35) {
+						let message = 'Wykryto krówki'
+						newResponses.push(message)
+						Speech.speak(message)
+						setLoading(false)
+					} else if (markerId === 40) {
+						let message = 'Wykryto numer 40.'
+						newResponses.push(message)
+						Speech.speak(message)
+						setLoading(false)
+					}
 
-				if (markerId === 25) {
-					setResponse({ detectedObject: 'Wykryto stolik.' })
-				}
+					// Jeśli wykryto ekspres do kawy (marker o ID 11), uruchom analizę tekstu
+					if (markerId === 11) {
+						Speech.speak('Wykryto ekspres do kawy. Rozpoczynam analizę tekstu.')
+						analyzeTextFromImage(imageUri) // Analizuj tekst na zdjęciu
+					}
+				})
 
-				if (markerId === 20) {
-					setResponse({ detectedObject: 'Wykryto słoik.' })
-				}
-
-				if (markerId === 30) {
-					setResponse({ detectedObject: 'Wykryto słoik.' })
-				}
-
-				if (markerId === 35) {
-					setResponse({ detectedObject: 'Wykryto słoik.' })
-				}
-
-				if (markerId === 40) {
-					setResponse({ detectedObject: 'Wykryto słoik.' })
-				}
-
-				// Jeśli wykryto ekspres do kawy (marker o ID 11), uruchom analizę tekstu
-				if (markerId === 11) {
-					Speech.speak('Rozpoczynam analizę tekstu.')
-					analyzeTextFromImage(imageUri) // Analizuj tekst na zdjęciu
-				}
+				// Po zakończeniu iteracji, ustaw wszystkie odpowiedzi w stanie
+				setResponse(prevResponse => ({
+					...prevResponse,
+					detectedObjects: newResponses,
+				}))
 			} else {
 				setError('Nie wykryto markera.')
 				//Speech.speak('Nie wykryto markera.')
+				setLoading(false)
 			}
 		} catch (error) {
 			console.error('Error during ArUco detection: ', error)
@@ -531,7 +547,9 @@ export default function App() {
 							disabled={loading}
 							accessibilityLabel='tryb wszystkie obiekty' // Etykieta dla VoiceOver
 							accessibilityRole='button'>
-							<Text style={styles.modeButtonText}>Wszystkie obiekty</Text>
+							<Text style={[styles.modeButtonText, detectionMode === 'all' && styles.selectedModeText]}>
+								Wszystkie obiekty
+							</Text>
 						</TouchableOpacity>
 						<TouchableOpacity
 							style={[styles.modeButton, detectionMode === 'car' ? styles.selectedMode : styles.unselectedMode]}
@@ -542,7 +560,9 @@ export default function App() {
 							disabled={loading && detectionMode === 'microwave'}
 							accessibilityLabel='tryb tylko pojazdy' // Etykieta dla VoiceOver
 							accessibilityRole='button'>
-							<Text style={styles.modeButtonText}>Tylko pojazdy</Text>
+							<Text style={[styles.modeButtonText, detectionMode === 'car' && styles.selectedModeText]}>
+								Tylko pojazdy
+							</Text>
 						</TouchableOpacity>
 						<TouchableOpacity
 							style={[styles.modeButton, detectionMode === 'microwave' ? styles.selectedMode : styles.unselectedMode]}
@@ -553,7 +573,9 @@ export default function App() {
 							disabled={loading && detectionMode === 'car'}
 							accessibilityLabel='tryb wykryj markery' // Etykieta dla VoiceOver
 							accessibilityRole='button'>
-							<Text style={styles.modeButtonText}>Wykryj markery</Text>
+							<Text style={[styles.modeButtonText, detectionMode === 'microwave' && styles.selectedModeText]}>
+								Wykryj markery
+							</Text>
 						</TouchableOpacity>
 					</View>
 					<View style={styles.buttonContainer}>
@@ -611,7 +633,7 @@ export default function App() {
 							</View>
 							<TouchableOpacity
 								style={styles.removeButton}
-								onPress={() => setTakePictureActive(false)}
+								onPress={stopDetection}
 								accessibilityLabel='Wyłącz aparat'
 								accessibilityRole='button'
 								disabled={loading}>
@@ -738,7 +760,7 @@ export default function App() {
 							)}
 						</View>
 					)}
-					{response && (
+					{response && (response.detectedText || (response.detectedObjects && response.detectedObjects.length > 0)) && (
 						<View style={styles.responseContainer}>
 							<Card style={styles.responseCard}>
 								<Card.Content>
@@ -758,8 +780,14 @@ export default function App() {
 													</TouchableOpacity>
 												</>
 											)}
-											{response.detectedObject && (
-												<Text style={[styles.responseText, { textAlign: 'center' }]}>{response.detectedObject}</Text>
+											{response?.detectedObjects && response.detectedObjects.length > 0 && (
+												<View>
+													{response.detectedObjects.map((detectedObject, index) => (
+														<Text key={index} style={styles.responseText}>
+															{detectedObject}
+														</Text>
+													))}
+												</View>
 											)}
 										</View>
 									)}
@@ -826,6 +854,7 @@ const styles = StyleSheet.create({
 		borderWidth: 2,
 		borderColor: '#4682B4',
 	},
+	selectedModeText: { color: 'white' },
 	box: {
 		position: 'absolute',
 		borderColor: 'red',
@@ -876,6 +905,7 @@ const styles = StyleSheet.create({
 		borderRadius: 15,
 		overflow: 'hidden',
 		marginTop: 10,
+		zIndex: 1,
 	},
 	cameraIconButton: {
 		marginBottom: 15,
@@ -892,6 +922,7 @@ const styles = StyleSheet.create({
 		alignItems: 'flex-end',
 		paddingHorizontal: 30,
 		paddingBottom: 10,
+		zIndex: 100,
 	},
 	cameraText: {
 		fontSize: 18,
@@ -923,7 +954,7 @@ const styles = StyleSheet.create({
 		backgroundColor: 'rgba(255, 0, 0, 0.7)',
 		padding: 5,
 		borderRadius: 15,
-		zIndex: 10,
+		zIndex: 100,
 	},
 	activityIndicator: {
 		marginVertical: 20,
