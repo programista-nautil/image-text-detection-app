@@ -178,7 +178,7 @@ export default function App() {
 				mode: detectionMode,
 			}
 
-			const detectRes = await axios.post('http://192.168.0.158:5000/detect_and_save_marker', data, {
+			const detectRes = await axios.post('http://146.59.18.75:5000//detect_and_save_marker', data, {
 				headers: {
 					'Content-Type': 'application/json',
 				},
@@ -215,7 +215,7 @@ export default function App() {
 						Speech.speak(message)
 						setLoading(false)
 					} else if (markerId === 40) {
-						let message = 'Wykryto numer 40.'
+						let message = 'Wykryto wizytówki.'
 						newResponses.push(message)
 						Speech.speak(message)
 						setLoading(false)
@@ -256,7 +256,7 @@ export default function App() {
 				mode: detectionMode, // Tryb jest zawsze "microwave" tutaj
 			}
 
-			const detectRes = await axios.post('http://192.168.0.158:5000/detect_and_save', data, {
+			const detectRes = await axios.post('http://146.59.18.75:5000//detect_and_save', data, {
 				headers: {
 					'Content-Type': 'application/json',
 				},
@@ -309,7 +309,7 @@ export default function App() {
 					mode: detectionMode, // Send the detection mode to the backend
 				}
 
-				const detectRes = await axios.post('http://192.168.0.158:5000/detect_and_save', data, {
+				const detectRes = await axios.post('http://146.59.18.75:5000//detect_and_save', data, {
 					headers: {
 						'Content-Type': 'application/json',
 					},
@@ -346,7 +346,7 @@ export default function App() {
 		try {
 			// Include detection mode in request
 			const detectObjectsRes = await axios.post(
-				`http://192.168.0.158:5000/detect_objects?mode=${detectionMode}`,
+				`http://146.59.18.75:5000//detect_objects?mode=${detectionMode}`,
 				formData,
 				{
 					headers: {
@@ -377,7 +377,7 @@ export default function App() {
 				mode: detectionMode,
 			}
 
-			const detectRes = await axios.post('http://192.168.0.158:5000/detect_and_save', data, {
+			const detectRes = await axios.post('http://146.59.18.75:5000//detect_and_save', data, {
 				headers: {
 					'Content-Type': 'application/json',
 				},
@@ -429,7 +429,7 @@ export default function App() {
 					type: 'image/jpeg',
 				})
 
-				const detectRes = await axios.post(`http://192.168.0.158:5000/detect_objects?mode=${detectionMode}`, formData, {
+				const detectRes = await axios.post(`http://146.59.18.75:5000//detect_objects?mode=${detectionMode}`, formData, {
 					headers: {
 						'Content-Type': 'multipart/form-data',
 					},
@@ -621,7 +621,8 @@ export default function App() {
 								style={styles.button}
 								icon='image'
 								disabled={loading || cameraActive}
-								accessibilityRole='button'>
+								accessibilityRole='button'
+								labelStyle={{ color: 'white' }}>
 								Wybierz z galerii
 							</Button>
 						)}
@@ -639,7 +640,8 @@ export default function App() {
 								disabled={loading || cameraActive || takePictureActive}
 								importantForAccessibility={loading ? 'no-hide-descendants' : 'yes'}
 								accessibilityElementsHidden={loading ? true : false}
-								accessibilityRole='button'>
+								accessibilityRole='button'
+								labelStyle={{ color: 'white' }}>
 								Otwórz aparat
 							</Button>
 						)}
@@ -650,7 +652,8 @@ export default function App() {
 								style={styles.button}
 								icon='camera'
 								disabled={loading || takePictureActive}
-								accessibilityRole='button'>
+								accessibilityRole='button'
+								labelStyle={{ color: 'white' }}>
 								Wykryj obiekty
 							</Button>
 						)}
@@ -917,6 +920,8 @@ const styles = StyleSheet.create({
 	},
 	descriptionCard: {
 		marginBottom: 20,
+		backgroundColor: '#f0f0f0',
+		color: '#333',
 	},
 	descriptionText: {
 		fontSize: 16,

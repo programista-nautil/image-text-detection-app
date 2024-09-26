@@ -1,33 +1,34 @@
 {
-  "expo": {
-    "name": "image-text-detection-app",
-    "slug": "image-text-detection-app",
-    "version": "1.0.0",
-    "orientation": "portrait",
-    "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
-    "splash": {
-      "image": "./assets/splash.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
-    },
-    "ios": {
-      "supportsTablet": true
-    },
-    "android": {
-      "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
-      },
-      "package": "com.daamian.imagetextdetectionapp"
-    },
-    "web": {
-      "favicon": "./assets/favicon.png"
-    },
-    "extra": {
-      "eas": {
-        "projectId": "d2dd5ada-8a75-45b7-aea5-ef52abd98c64"
-      }
-    }
-  }
+	"expo": {
+		"name": "Skaner Zdjęć",
+		"slug": "image-text-detection-app",
+		"version": "1.0.0",
+		"orientation": "portrait",
+		"icon": "./assets/ikona.webp",
+		"userInterfaceStyle": "light",
+		"splash": {
+			"image": "./assets/splash.png", // ścieżka do obrazu splash screen
+			"resizeMode": "contain", // styl dopasowania obrazu (możesz użyć "cover" lub "contain")
+			"backgroundColor": "#ffffff" // kolor tła dla splash screena
+		},
+		"ios": {
+			"supportsTablet": true,
+			"bundleIdentifier": "com.daamian.imagetextdetectionapp"
+		},
+		"android": {
+			"adaptiveIcon": {
+				"foregroundImage": "./assets/adaptive-icon.png",
+				"backgroundColor": "#ffffff"
+			},
+			"package": "com.daamian.imagetextdetectionapp"
+		},
+		"web": {
+			"favicon": "./assets/favicon.png"
+		},
+		"extra": {
+			"eas": {
+				"projectId": "d2dd5ada-8a75-45b7-aea5-ef52abd98c64"
+			}
+		}
+	}
 }
