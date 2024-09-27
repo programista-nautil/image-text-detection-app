@@ -178,7 +178,7 @@ export default function App() {
 				mode: detectionMode,
 			}
 
-			const detectRes = await axios.post('http://146.59.18.75:5000//detect_and_save_marker', data, {
+			const detectRes = await axios.post('http://146.59.18.75:8000/detect_and_save_marker', data, {
 				headers: {
 					'Content-Type': 'application/json',
 				},
@@ -256,7 +256,7 @@ export default function App() {
 				mode: detectionMode, // Tryb jest zawsze "microwave" tutaj
 			}
 
-			const detectRes = await axios.post('http://146.59.18.75:5000//detect_and_save', data, {
+			const detectRes = await axios.post('http://146.59.18.75:8000/detect_and_save', data, {
 				headers: {
 					'Content-Type': 'application/json',
 				},
@@ -268,9 +268,10 @@ export default function App() {
 				Speech.speak('Brak wykrytego tekstu.')
 			}
 		} catch (error) {
-			console.error('Error during text analysis: ', error)
-			setError('Error during text analysis')
-			Speech.speak('Wystąpił błąd podczas analizy tekstu.')
+			console.error('Error during ArUco detection: ', error.message, error.response ? error.response.data : null);
+			setError('Error during marker detection');
+			Speech.speak('Wystąpił błąd podczas wykrywania markera.');
+			setLoading(false);
 		} finally {
 			setLoading(false)
 		}
@@ -309,7 +310,7 @@ export default function App() {
 					mode: detectionMode, // Send the detection mode to the backend
 				}
 
-				const detectRes = await axios.post('http://146.59.18.75:5000//detect_and_save', data, {
+				const detectRes = await axios.post('http://146.59.18.75:8000/detect_and_save', data, {
 					headers: {
 						'Content-Type': 'application/json',
 					},
@@ -318,8 +319,10 @@ export default function App() {
 				// Handle the response
 				setResponse(detectRes.data)
 			} catch (error) {
-				console.error('Error during analysis: ', error)
-				setError('Error during analysis')
+				console.error('Error during ArUco detection: ', error.message, error.response ? error.response.data : null);
+				setError('Error during marker detection');
+				Speech.speak('Wystąpił błąd podczas wykrywania markera.');
+				setLoading(false);
 			} finally {
 				setLoading(false)
 			}
@@ -346,7 +349,7 @@ export default function App() {
 		try {
 			// Include detection mode in request
 			const detectObjectsRes = await axios.post(
-				`http://146.59.18.75:5000//detect_objects?mode=${detectionMode}`,
+				`http://146.59.18.75:8000/detect_objects?mode=${detectionMode}`,
 				formData,
 				{
 					headers: {
@@ -377,17 +380,17 @@ export default function App() {
 				mode: detectionMode,
 			}
 
-			const detectRes = await axios.post('http://146.59.18.75:5000//detect_and_save', data, {
+			const detectRes = await axios.post('http://146.59.18.75:8000/detect_and_save', data, {
 				headers: {
 					'Content-Type': 'application/json',
 				},
 			})
 			setResponse(detectRes.data)
 		} catch (error) {
-			console.error('Error uploading image: ', error)
-			const uploadErrorMessage = 'Wystąpił błąd podczas przesyłania obrazu.'
-			setError(uploadErrorMessage)
-			Speech.speak(uploadErrorMessage)
+			console.error('Error during ArUco detection: ', error.message, error.response ? error.response.data : null);
+			setError('Error during marker detection');
+			Speech.speak('Wystąpił błąd podczas wykrywania markera.');
+			setLoading(false);
 		} finally {
 			setLoading(false)
 		}
@@ -429,7 +432,7 @@ export default function App() {
 					type: 'image/jpeg',
 				})
 
-				const detectRes = await axios.post(`http://146.59.18.75:5000//detect_objects?mode=${detectionMode}`, formData, {
+				const detectRes = await axios.post(`http://146.59.18.75:8000/detect_objects?mode=${detectionMode}`, formData, {
 					headers: {
 						'Content-Type': 'multipart/form-data',
 					},
@@ -456,8 +459,10 @@ export default function App() {
 					Speech.speak('Nie wykryto żadnych obiektów.')
 				}
 			} catch (error) {
-				console.error('Error during detection: ', error)
-				setError('Error during detection')
+				console.error('Error during ArUco detection: ', error.message, error.response ? error.response.data : null);
+				setError('Error during marker detection');
+				Speech.speak('Wystąpił błąd podczas wykrywania markera.');
+				setLoading(false);
 			} finally {
 				setLoading(false) // Upewnij się, że ładowanie zostaje zatrzymane
 			}

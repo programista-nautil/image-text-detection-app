@@ -4,7 +4,7 @@
 		"slug": "image-text-detection-app",
 		"version": "1.0.0",
 		"orientation": "portrait",
-		"icon": "./assets/ikona.webp",
+		"icon": "./assets/icon.png",
 		"userInterfaceStyle": "light",
 		"splash": {
 			"image": "./assets/splash.png", // ścieżka do obrazu splash screen
@@ -17,7 +17,7 @@
 		},
 		"android": {
 			"adaptiveIcon": {
-				"foregroundImage": "./assets/adaptive-icon.png",
+				"foregroundImage": "./assets/icon.png",
 				"backgroundColor": "#ffffff"
 			},
 			"package": "com.daamian.imagetextdetectionapp"
