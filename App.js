@@ -830,7 +830,31 @@ export default function App() {
 									Wyślij obraz
 								</Button>
 							)}
-							{error && <Text style={styles.errorText}>{error}</Text>}
+							{error && (
+								<>
+									{detectionMode === 'microwave' && (
+										<Button
+											mode='contained'
+											onPress={() => {
+												if (image) {
+													setImage(null)
+												}
+												setResponse(null)
+												setTakePictureActive(true)
+											}}
+											style={[styles.button, { marginVertical: 10 }]}
+											icon='camera'
+											disabled={loading || cameraActive || takePictureActive}
+											importantForAccessibility={loading ? 'no-hide-descendants' : 'yes'}
+											accessibilityElementsHidden={loading ? true : false}
+											accessibilityRole='button'
+											labelStyle={{ color: 'white' }}>
+											Zrób zdjęcie ponownie
+										</Button>
+									)}
+									<Text style={styles.errorText}>{error}</Text>
+								</>
+							)}
 						</>
 					) : (
 						!cameraActive &&
@@ -864,6 +888,26 @@ export default function App() {
 							response.detectedText ||
 							(response.detectedObjects && response.detectedObjects.length > 0)) && (
 							<View style={styles.responseContainer}>
+								{response && (
+									<Button
+										mode='contained'
+										onPress={() => {
+											if (image) {
+												setImage(null)
+											}
+											setResponse(null)
+											setTakePictureActive(true)
+										}}
+										style={[styles.button, { marginBottom: 10 }]}
+										icon='camera'
+										disabled={loading || cameraActive || takePictureActive}
+										importantForAccessibility={loading ? 'no-hide-descendants' : 'yes'}
+										accessibilityElementsHidden={loading ? true : false}
+										accessibilityRole='button'
+										labelStyle={{ color: 'white' }}>
+										Zrob zdjęcie ponownie
+									</Button>
+								)}
 								<Card style={styles.responseCard}>
 									<Card.Content>
 										{detectionMode === 'microwave' && (
