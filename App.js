@@ -37,6 +37,11 @@ export default function App() {
 	const errorRef = useRef(null)
 	const [isSpeaking, setIsSpeaking] = useState(false)
 	const [arucoMarkers, setArucoMarkers] = useState({ marker_ids: [], corners: [] })
+	const [buttonClicked, setButtonClicked] = useState({
+		all: false,
+		car: false,
+		microwave: false,
+	})
 
 	const aspectRatio = 4 / 3
 
@@ -109,7 +114,44 @@ export default function App() {
 			setTakePictureActive(false)
 			setCameraActive(false)
 		}
-		setDetectionMode(newMode) // Set the new detection mode
+
+		// Zaktualizuj tryb detekcji
+		setDetectionMode(newMode)
+
+		// Ustaw przycisk jako kliknięty
+		setButtonClicked(prevState => ({
+			...prevState,
+			[newMode]: true,
+		}))
+
+		setTimeout(() => {
+			setButtonClicked(prevState => ({
+				...prevState,
+				[newMode]: false, // Zresetuj stan po krótkim czasie
+			}))
+		}, 1000)
+
+		// Sprawdź, czy VoiceOver lub TalkBack są włączone
+		AccessibilityInfo.isScreenReaderEnabled().then(isScreenReaderEnabled => {
+			if (isScreenReaderEnabled) {
+				// Odczytaj wybrany tryb tylko, jeśli VoiceOver lub TalkBack są aktywne
+				let modeMessage = ''
+				switch (newMode) {
+					case 'all':
+						modeMessage = 'Wybrano tryb wykrywania wszystkich obiektów'
+						break
+					case 'car':
+						modeMessage = 'Wybrano tryb wykrywania pojazdów'
+						break
+					case 'microwave':
+						modeMessage = 'Wybrano tryb wykrywania markerów'
+						break
+					default:
+						modeMessage = 'Wybrano nieznany tryb'
+				}
+				Speech.speak(modeMessage) // Odczytaj wybrany tryb
+			}
+		})
 	}
 
 	const getDescriptionText = () => {
@@ -178,7 +220,7 @@ export default function App() {
 				mode: detectionMode,
 			}
 
-			const detectRes = await axios.post('http://146.59.18.75:8000/detect_and_save_marker', data, {
+			const detectRes = await axios.post('https://latwytekst.pl:8444/detect_and_save_marker', data, {
 				headers: {
 					'Content-Type': 'application/json',
 				},
@@ -219,6 +261,11 @@ export default function App() {
 						newResponses.push(message)
 						Speech.speak(message)
 						setLoading(false)
+					} else if (markerId === 45) {
+						let message = 'Wykryto gadżety.'
+						newResponses.push(message)
+						Speech.speak(message)
+						setLoading(false)
 					}
 
 					// Jeśli wykryto ekspres do kawy (marker o ID 11), uruchom analizę tekstu
@@ -256,7 +303,7 @@ export default function App() {
 				mode: detectionMode, // Tryb jest zawsze "microwave" tutaj
 			}
 
-			const detectRes = await axios.post('http://146.59.18.75:8000/detect_and_save', data, {
+			const detectRes = await axios.post('https://latwytekst.pl:8444/detect_and_save', data, {
 				headers: {
 					'Content-Type': 'application/json',
 				},
@@ -268,10 +315,10 @@ export default function App() {
 				Speech.speak('Brak wykrytego tekstu.')
 			}
 		} catch (error) {
-			console.error('Error during ArUco detection: ', error.message, error.response ? error.response.data : null);
-			setError('Error during marker detection');
-			Speech.speak('Wystąpił błąd podczas wykrywania markera.');
-			setLoading(false);
+			console.error('Error during ArUco detection: ', error.message, error.response ? error.response.data : null)
+			setError('Error during marker detection')
+			Speech.speak('Wystąpił błąd podczas wykrywania markera.')
+			setLoading(false)
 		} finally {
 			setLoading(false)
 		}
@@ -310,7 +357,7 @@ export default function App() {
 					mode: detectionMode, // Send the detection mode to the backend
 				}
 
-				const detectRes = await axios.post('http://146.59.18.75:8000/detect_and_save', data, {
+				const detectRes = await axios.post('https://latwytekst.pl:8444/detect_and_save', data, {
 					headers: {
 						'Content-Type': 'application/json',
 					},
@@ -319,10 +366,10 @@ export default function App() {
 				// Handle the response
 				setResponse(detectRes.data)
 			} catch (error) {
-				console.error('Error during ArUco detection: ', error.message, error.response ? error.response.data : null);
-				setError('Error during marker detection');
-				Speech.speak('Wystąpił błąd podczas wykrywania markera.');
-				setLoading(false);
+				console.error('Error during ArUco detection: ', error.message, error.response ? error.response.data : null)
+				setError('Error during marker detection')
+				Speech.speak('Wystąpił błąd podczas wykrywania markera.')
+				setLoading(false)
 			} finally {
 				setLoading(false)
 			}
@@ -349,7 +396,7 @@ export default function App() {
 		try {
 			// Include detection mode in request
 			const detectObjectsRes = await axios.post(
-				`http://146.59.18.75:8000/detect_objects?mode=${detectionMode}`,
+				`https://latwytekst.pl:8444/detect_objects?mode=${detectionMode}`,
 				formData,
 				{
 					headers: {
@@ -380,17 +427,17 @@ export default function App() {
 				mode: detectionMode,
 			}
 
-			const detectRes = await axios.post('http://146.59.18.75:8000/detect_and_save', data, {
+			const detectRes = await axios.post('https://latwytekst.pl:8444/detect_and_save', data, {
 				headers: {
 					'Content-Type': 'application/json',
 				},
 			})
 			setResponse(detectRes.data)
 		} catch (error) {
-			console.error('Error during ArUco detection: ', error.message, error.response ? error.response.data : null);
-			setError('Error during marker detection');
-			Speech.speak('Wystąpił błąd podczas wykrywania markera.');
-			setLoading(false);
+			console.error('Error during ArUco detection: ', error.message, error.response ? error.response.data : null)
+			setError('Error during marker detection')
+			Speech.speak('Wystąpił błąd podczas wykrywania markera.')
+			setLoading(false)
 		} finally {
 			setLoading(false)
 		}
@@ -432,11 +479,15 @@ export default function App() {
 					type: 'image/jpeg',
 				})
 
-				const detectRes = await axios.post(`http://146.59.18.75:8000/detect_objects?mode=${detectionMode}`, formData, {
-					headers: {
-						'Content-Type': 'multipart/form-data',
-					},
-				})
+				const detectRes = await axios.post(
+					`https://latwytekst.pl:8444/detect_objects?mode=${detectionMode}`,
+					formData,
+					{
+						headers: {
+							'Content-Type': 'multipart/form-data',
+						},
+					}
+				)
 
 				let detectionData = detectRes.data
 				if (typeof detectionData === 'string') {
@@ -459,10 +510,10 @@ export default function App() {
 					Speech.speak('Nie wykryto żadnych obiektów.')
 				}
 			} catch (error) {
-				console.error('Error during ArUco detection: ', error.message, error.response ? error.response.data : null);
-				setError('Error during marker detection');
-				Speech.speak('Wystąpił błąd podczas wykrywania markera.');
-				setLoading(false);
+				console.error('Error during ArUco detection: ', error.message, error.response ? error.response.data : null)
+				setError('Error during marker detection')
+				Speech.speak('Wystąpił błąd podczas wykrywania markera.')
+				setLoading(false)
 			} finally {
 				setLoading(false) // Upewnij się, że ładowanie zostaje zatrzymane
 			}
@@ -573,19 +624,16 @@ export default function App() {
 						this.scrollView = ref
 					}}
 					onContentSizeChange={() => this.scrollView.scrollToEnd({ animated: true })}>
-					<Card style={styles.descriptionCard}>
-						<Card.Content>
-							<Text style={styles.descriptionText}>{getDescriptionText()}</Text>
-						</Card.Content>
-					</Card>
 					{/* Object detection mode selector using buttons */}
 					<Text style={styles.modeTitle}>Wybierz tryb:</Text>
 					<View style={styles.modeSelector}>
 						<TouchableOpacity
 							style={[styles.modeButton, detectionMode === 'all' ? styles.selectedMode : styles.unselectedMode]}
-							onPress={() => handleModeChange('all')}
+							onPress={() => {
+								handleModeChange('all')
+							}}
 							disabled={loading}
-							accessibilityLabel='tryb wszystkie obiekty' // Etykieta dla VoiceOver
+							accessibilityLabel={buttonClicked.all ? '' : 'tryb wszystkie obiekty'}
 							accessibilityRole='button'>
 							<Text style={[styles.modeButtonText, detectionMode === 'all' && styles.selectedModeText]}>
 								Wszystkie obiekty
@@ -598,7 +646,7 @@ export default function App() {
 								handleModeChange('car')
 							}}
 							disabled={loading && detectionMode === 'microwave'}
-							accessibilityLabel='tryb tylko pojazdy' // Etykieta dla VoiceOver
+							accessibilityLabel={buttonClicked.car ? '' : 'tryb tylko pojazdy'}
 							accessibilityRole='button'>
 							<Text style={[styles.modeButtonText, detectionMode === 'car' && styles.selectedModeText]}>
 								Tylko pojazdy
@@ -611,13 +659,18 @@ export default function App() {
 								handleModeChange('microwave')
 							}}
 							disabled={loading && detectionMode === 'car'}
-							accessibilityLabel='tryb wykryj markery' // Etykieta dla VoiceOver
+							accessibilityLabel={buttonClicked.microwave ? '' : 'tryb wykryj markery'}
 							accessibilityRole='button'>
 							<Text style={[styles.modeButtonText, detectionMode === 'microwave' && styles.selectedModeText]}>
 								Wykryj markery
 							</Text>
 						</TouchableOpacity>
 					</View>
+					<Card style={styles.descriptionCard}>
+						<Card.Content>
+							<Text style={styles.descriptionText}>{getDescriptionText()}</Text>
+						</Card.Content>
+					</Card>
 					<View style={styles.buttonContainer}>
 						{detectionMode === 'car' && (
 							<Button
@@ -924,7 +977,7 @@ const styles = StyleSheet.create({
 		fontSize: 12,
 	},
 	descriptionCard: {
-		marginBottom: 20,
+		marginVertical: 10,
 		backgroundColor: '#f0f0f0',
 		color: '#333',
 	},
