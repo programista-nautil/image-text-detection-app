@@ -48,6 +48,22 @@ export default function App() {
 	// Oblicz wysokość na podstawie szerokości ekranu i proporcji
 	const cameraHeight = (width / aspectRatio) * 1.5
 
+	const takePictureButtonRef = useRef(null)
+
+	const handleRetakePhoto = () => {
+		if (image) {
+			setImage(null)
+		}
+		setResponse(null)
+		setTakePictureActive(true)
+
+		// Skupienie na przycisku "Zrób zdjęcie"
+		const reactTag = findNodeHandle(takePictureButtonRef.current)
+		if (reactTag) {
+			AccessibilityInfo.setAccessibilityFocus(reactTag)
+		}
+	}
+
 	// Focus on error
 	useEffect(() => {
 		if (error && errorRef.current) {
@@ -720,6 +736,7 @@ export default function App() {
 						<Camera style={{ width: width - 40, height: cameraHeight }} ref={cameraRef}>
 							<View style={styles.cameraButtonContainer}>
 								<Pressable
+									ref={takePictureButtonRef}
 									onPress={takePicture}
 									style={styles.cameraIconButton}
 									accessibilityLabel='Zrób zdjęcie' // Etykieta dla VoiceOver
@@ -835,13 +852,7 @@ export default function App() {
 									{detectionMode === 'microwave' && (
 										<Button
 											mode='contained'
-											onPress={() => {
-												if (image) {
-													setImage(null)
-												}
-												setResponse(null)
-												setTakePictureActive(true)
-											}}
+											onPress={handleRetakePhoto}
 											style={[styles.button, { marginVertical: 10 }]}
 											icon='camera'
 											disabled={loading || cameraActive || takePictureActive}
@@ -891,13 +902,7 @@ export default function App() {
 								{response && (
 									<Button
 										mode='contained'
-										onPress={() => {
-											if (image) {
-												setImage(null)
-											}
-											setResponse(null)
-											setTakePictureActive(true)
-										}}
+										onPress={handleRetakePhoto}
 										style={[styles.button, { marginBottom: 10 }]}
 										icon='camera'
 										disabled={loading || cameraActive || takePictureActive}
