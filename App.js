@@ -226,88 +226,83 @@ export default function App() {
 	}
 
 	// Funkcja do przesyłania obrazu i detekcji markerów ArUco
-	const detectArUcoMarker = async imageUri => {
+	const detectArUcoMarker = async (imageUri) => {
 		try {
-			setLoading(true)
-			const base64Image = await getBase64(imageUri)
-
+			setLoading(true); // Rozpoczynamy ładowanie
+			const base64Image = await getBase64(imageUri);
+	
 			const data = {
 				image: base64Image,
 				mode: detectionMode,
-			}
-
-			const detectRes = await axios.post('https://latwytekst.pl:8444/detect_and_save_marker', data, {
+			};
+	
+			const detectRes = await axios.post('https://debogorze.pl/detect_and_save_marker', data, {
 				headers: {
 					'Content-Type': 'application/json',
 				},
-			})
-
+			});
+	
 			// Sprawdzamy, czy wykryto jakiekolwiek markery
 			if (detectRes.data.marker_ids && detectRes.data.marker_ids.length > 0) {
-				setArucoMarkers({
-					marker_ids: detectRes.data.marker_ids || [], // Sprawdzenie, czy dane są zdefiniowane
-					corners: detectRes.data.corners || [], // Sprawdzenie, czy dane są zdefiniowane
-				})
-				// Iterujemy po każdym wykrytym markerze
-				const newResponses = [] // Zmienna do przechowywania wszystkich odpowiedzi
-				detectRes.data.marker_ids.forEach(markerId => {
-					// Dodajemy odpowiedzi dla każdego markera do tablicy
-					if (markerId === 25) {
-						let message = 'Wykryto stolik.'
-						newResponses.push(message)
-						Speech.speak(message)
-						setLoading(false)
-					} else if (markerId === 20) {
-						let message = 'Wykryto słoik.'
-						newResponses.push(message)
-						Speech.speak(message)
-						setLoading(false)
-					} else if (markerId === 30) {
-						let message = 'Wykryto stojak.'
-						newResponses.push(message)
-						Speech.speak(message)
-						setLoading(false)
-					} else if (markerId === 35) {
-						let message = 'Wykryto krówki'
-						newResponses.push(message)
-						Speech.speak(message)
-						setLoading(false)
-					} else if (markerId === 40) {
-						let message = 'Wykryto wizytówki.'
-						newResponses.push(message)
-						Speech.speak(message)
-						setLoading(false)
-					} else if (markerId === 45) {
-						let message = 'Wykryto gadżety.'
-						newResponses.push(message)
-						Speech.speak(message)
-						setLoading(false)
+				const detectedMarkers = detectRes.data.marker_ids || [];
+				const corners = detectRes.data.corners || [];
+				setArucoMarkers({ marker_ids: detectedMarkers, corners });
+	
+				const newResponses = []; // Zmienna do przechowywania wszystkich odpowiedzi
+	
+				detectedMarkers.forEach((markerId) => {
+					let message = ''; // Wiadomość, którą wypowiemy
+	
+					switch (markerId) {
+						case 25:
+							message = 'Wykryto stolik.';
+							break;
+						case 20:
+							message = 'Wykryto słoik.';
+							break;
+						case 30:
+							message = 'Wykryto stojak.';
+							break;
+						case 35:
+							message = 'Wykryto krówki.';
+							break;
+						case 40:
+							message = 'Wykryto wizytówki.';
+							break;
+						case 45:
+							message = 'Wykryto gadżety.';
+							break;
+						case 11:
+							message = 'Wykryto ekspres do kawy. Rozpoczynam analizę tekstu.';
+							analyzeTextFromImage(imageUri); // Analizuj tekst na zdjęciu
+							break;
+						default:
+							message = `Wykryto nieznany marker o ID ${markerId}.`;
 					}
-
-					// Jeśli wykryto ekspres do kawy (marker o ID 11), uruchom analizę tekstu
-					if (markerId === 11) {
-						Speech.speak('Wykryto ekspres do kawy. Rozpoczynam analizę tekstu.')
-						analyzeTextFromImage(imageUri) // Analizuj tekst na zdjęciu
+	
+					if (message) {
+						newResponses.push(message);
+						Speech.speak(message);
 					}
-				})
-
-				// Po zakończeniu iteracji, ustaw wszystkie odpowiedzi w stanie
-				setResponse(prevResponse => ({
+				});
+	
+				// Ustawiamy odpowiedzi po zakończeniu pętli
+				setResponse((prevResponse) => ({
 					...prevResponse,
 					detectedObjects: newResponses,
-				}))
+				}));
 			} else {
-				setError('Nie wykryto markera.')
-				//Speech.speak('Nie wykryto markera.')
-				setLoading(false)
+				setError('Nie wykryto markera.');
 			}
 		} catch (error) {
-			console.error('Error during ArUco detection: ', error)
-			setError('Error during marker detection')
-			Speech.speak('Wystąpił błąd podczas wykrywania markera.')
-			setLoading(false)
+			console.error('Error detectArUcoMarker: ', error);
+			setError('Error during marker detection');
+			Speech.speak('Wystąpił błąd podczas wykrywania markera.');
+		} finally {
+			setLoading(false); // Wyłączamy ładowanie niezależnie od wyniku
 		}
-	}
+	};
+	
 
 	// Funkcja do analizy tekstu z obrazu
 	const analyzeTextFromImage = async imageUri => {
@@ -319,7 +314,7 @@ export default function App() {
 				mode: detectionMode, // Tryb jest zawsze "microwave" tutaj
 			}
 
-			const detectRes = await axios.post('https://latwytekst.pl:8444/detect_and_save', data, {
+			const detectRes = await axios.post('https://debogorze.pl/detect_and_save', data, {
 				headers: {
 					'Content-Type': 'application/json',
 				},
@@ -331,7 +326,7 @@ export default function App() {
 				Speech.speak('Brak wykrytego tekstu.')
 			}
 		} catch (error) {
-			console.error('Error during ArUco detection: ', error.message, error.response ? error.response.data : null)
+			console.error('Error analyzeTextFromImage: ', error.message, error.response ? error.response.data : null)
 			setError('Error during marker detection')
 			Speech.speak('Wystąpił błąd podczas wykrywania markera.')
 			setLoading(false)
@@ -373,7 +368,7 @@ export default function App() {
 					mode: detectionMode, // Send the detection mode to the backend
 				}
 
-				const detectRes = await axios.post('https://latwytekst.pl:8444/detect_and_save', data, {
+				const detectRes = await axios.post('https://debogorze.pl/detect_and_save', data, {
 					headers: {
 						'Content-Type': 'application/json',
 					},
@@ -382,7 +377,7 @@ export default function App() {
 				// Handle the response
 				setResponse(detectRes.data)
 			} catch (error) {
-				console.error('Error during ArUco detection: ', error.message, error.response ? error.response.data : null)
+				console.error('Error analyzeImage: ', error.message, error.response ? error.response.data : null)
 				setError('Error during marker detection')
 				Speech.speak('Wystąpił błąd podczas wykrywania markera.')
 				setLoading(false)
@@ -411,15 +406,11 @@ export default function App() {
 
 		try {
 			// Include detection mode in request
-			const detectObjectsRes = await axios.post(
-				`https://latwytekst.pl:8444/detect_objects?mode=${detectionMode}`,
-				formData,
-				{
-					headers: {
-						'Content-Type': 'multipart/form-data',
-					},
-				}
-			)
+			const detectObjectsRes = await axios.post(`https://debogorze.pl/detect_objects?mode=${detectionMode}`, formData, {
+				headers: {
+					'Content-Type': 'multipart/form-data',
+				},
+			})
 
 			if (detectObjectsRes.data.length === 0) {
 				const noObjectsMessage = 'Nie wykryto żadnych obiektów na zdjęciu.'
@@ -443,14 +434,14 @@ export default function App() {
 				mode: detectionMode,
 			}
 
-			const detectRes = await axios.post('https://latwytekst.pl:8444/detect_and_save', data, {
+			const detectRes = await axios.post('https://debogorze.pl/detect_and_save', data, {
 				headers: {
 					'Content-Type': 'application/json',
 				},
 			})
 			setResponse(detectRes.data)
 		} catch (error) {
-			console.error('Error during ArUco detection: ', error.message, error.response ? error.response.data : null)
+			console.error('Error danalyzeImage: ', error.message, error.response ? error.response.data : null)
 			setError('Error during marker detection')
 			Speech.speak('Wystąpił błąd podczas wykrywania markera.')
 			setLoading(false)
@@ -495,15 +486,11 @@ export default function App() {
 					type: 'image/jpeg',
 				})
 
-				const detectRes = await axios.post(
-					`https://latwytekst.pl:8444/detect_objects?mode=${detectionMode}`,
-					formData,
-					{
-						headers: {
-							'Content-Type': 'multipart/form-data',
-						},
-					}
-				)
+				const detectRes = await axios.post(`https://debogorze.pl/detect_objects?mode=${detectionMode}`, formData, {
+					headers: {
+						'Content-Type': 'multipart/form-data',
+					},
+				})
 
 				let detectionData = detectRes.data
 				if (typeof detectionData === 'string') {
@@ -526,7 +513,7 @@ export default function App() {
 					Speech.speak('Nie wykryto żadnych obiektów.')
 				}
 			} catch (error) {
-				console.error('Error during ArUco detection: ', error.message, error.response ? error.response.data : null)
+				console.error('Error detectObjects: ', error.message, error.response ? error.response.data : null)
 				setError('Error during marker detection')
 				Speech.speak('Wystąpił błąd podczas wykrywania markera.')
 				setLoading(false)
