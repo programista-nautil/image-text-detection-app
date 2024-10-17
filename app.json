@@ -1,15 +1,15 @@
 {
 	"expo": {
-		"name": "Skaner Zdjęć",
+		"name": "VisioAssist",
 		"slug": "image-text-detection-app",
 		"version": "1.0.0",
 		"orientation": "portrait",
 		"icon": "./assets/ikona.png",
 		"userInterfaceStyle": "light",
 		"splash": {
-			"image": "./assets/splash.png", // ścieżka do obrazu splash screen
-			"resizeMode": "contain", // styl dopasowania obrazu (możesz użyć "cover" lub "contain")
-			"backgroundColor": "#ffffff" // kolor tła dla splash screena
+			"image": "./assets/splash.png",
+			"resizeMode": "contain",
+			"backgroundColor": "#ffffff"
 		},
 		"ios": {
 			"supportsTablet": true,
@@ -17,8 +17,8 @@
 		},
 		"android": {
 			"adaptiveIcon": {
-				"foregroundImage": "./assets/ikona.png",
-				"backgroundColor": "#ffffff"
+				"foregroundImage": "./assets/android-icon.png",
+				"backgroundColor": "#FFFFFF"
 			},
 			"package": "com.daamian.imagetextdetectionapp"
 		},

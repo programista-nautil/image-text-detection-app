@@ -42,6 +42,8 @@ export default function App() {
 		car: false,
 		microwave: false,
 	})
+	const [carCameraMode, setCarCameraMode] = useState(false)
+	const [imageSource, setImageSource] = useState('')
 
 	const aspectRatio = 4 / 3
 
@@ -53,6 +55,7 @@ export default function App() {
 	const handleRetakePhoto = () => {
 		if (image) {
 			setImage(null)
+			setImageSource('')
 		}
 		setResponse(null)
 		setTakePictureActive(true)
@@ -193,6 +196,7 @@ export default function App() {
 		if (!result.canceled) {
 			const selectedImage = result.assets[0].uri
 			setImage(selectedImage)
+			setImageSource('gallery')
 			setObjectDetection(null)
 			setResponse(null)
 			setError(null)
@@ -207,6 +211,7 @@ export default function App() {
 			let photo = await cameraRef.current.takePictureAsync()
 			const selectedImage = photo.uri
 			setImage(selectedImage)
+			setImageSource('camera')
 			setObjectDetection(null)
 			setResponse(null)
 			setError(null)
@@ -226,83 +231,82 @@ export default function App() {
 	}
 
 	// Funkcja do przesyłania obrazu i detekcji markerów ArUco
-	const detectArUcoMarker = async (imageUri) => {
+	const detectArUcoMarker = async imageUri => {
 		try {
-			setLoading(true); // Rozpoczynamy ładowanie
-			const base64Image = await getBase64(imageUri);
-	
+			setLoading(true) // Rozpoczynamy ładowanie
+			const base64Image = await getBase64(imageUri)
+
 			const data = {
 				image: base64Image,
 				mode: detectionMode,
-			};
-	
+			}
+
 			const detectRes = await axios.post('https://debogorze.pl/detect_and_save_marker', data, {
 				headers: {
 					'Content-Type': 'application/json',
 				},
-			});
-	
+			})
+
 			// Sprawdzamy, czy wykryto jakiekolwiek markery
 			if (detectRes.data.marker_ids && detectRes.data.marker_ids.length > 0) {
-				const detectedMarkers = detectRes.data.marker_ids || [];
-				const corners = detectRes.data.corners || [];
-				setArucoMarkers({ marker_ids: detectedMarkers, corners });
-	
-				const newResponses = []; // Zmienna do przechowywania wszystkich odpowiedzi
-	
-				detectedMarkers.forEach((markerId) => {
-					let message = ''; // Wiadomość, którą wypowiemy
-	
+				const detectedMarkers = detectRes.data.marker_ids || []
+				const corners = detectRes.data.corners || []
+				setArucoMarkers({ marker_ids: detectedMarkers, corners })
+
+				const newResponses = [] // Zmienna do przechowywania wszystkich odpowiedzi
+
+				detectedMarkers.forEach(markerId => {
+					let message = '' // Wiadomość, którą wypowiemy
+
 					switch (markerId) {
 						case 25:
-							message = 'Wykryto stolik.';
-							break;
+							message = 'Wykryto stolik.'
+							break
 						case 20:
-							message = 'Wykryto słoik.';
-							break;
+							message = 'Wykryto słoik.'
+							break
 						case 30:
-							message = 'Wykryto stojak.';
-							break;
+							message = 'Wykryto stojak.'
+							break
 						case 35:
-							message = 'Wykryto krówki.';
-							break;
+							message = 'Wykryto krówki.'
+							break
 						case 40:
-							message = 'Wykryto wizytówki.';
-							break;
+							message = 'Wykryto wizytówki.'
+							break
 						case 45:
-							message = 'Wykryto gadżety.';
-							break;
+							message = 'Wykryto gadżety.'
+							break
 						case 11:
-							message = 'Wykryto ekspres do kawy. Rozpoczynam analizę tekstu.';
-							analyzeTextFromImage(imageUri); // Analizuj tekst na zdjęciu
-							break;
+							message = 'Wykryto ekspres do kawy. Rozpoczynam analizę tekstu.'
+							analyzeTextFromImage(imageUri) // Analizuj tekst na zdjęciu
+							break
 						default:
-							message = `Wykryto nieznany marker o ID ${markerId}.`;
+							message = `Wykryto nieznany marker o ID ${markerId}.`
 					}
-	
+
 					if (message) {
-						newResponses.push(message);
-						Speech.speak(message);
+						newResponses.push(message)
+						Speech.speak(message)
 					}
-				});
-	
+				})
+
 				// Ustawiamy odpowiedzi po zakończeniu pętli
-				setResponse((prevResponse) => ({
+				setResponse(prevResponse => ({
 					...prevResponse,
 					detectedObjects: newResponses,
-				}));
+				}))
 			} else {
-				setError('Nie wykryto markera.');
+				setError('Nie wykryto markera.')
 			}
 		} catch (error) {
-			console.error('Error detectArUcoMarker: ', error);
-			setError('Error during marker detection');
-			Speech.speak('Wystąpił błąd podczas wykrywania markera.');
+			console.error('Error detectArUcoMarker: ', error)
+			setError('Error during marker detection')
+			Speech.speak('Wystąpił błąd podczas wykrywania markera.')
 		} finally {
-			setLoading(false); // Wyłączamy ładowanie niezależnie od wyniku
+			setLoading(false) // Wyłączamy ładowanie niezależnie od wyniku
 		}
-	};
-	
+	}
 
 	// Funkcja do analizy tekstu z obrazu
 	const analyzeTextFromImage = async imageUri => {
@@ -676,16 +680,37 @@ export default function App() {
 					</Card>
 					<View style={styles.buttonContainer}>
 						{detectionMode === 'car' && (
-							<Button
-								mode='contained'
-								onPress={pickImage}
-								style={styles.button}
-								icon='image'
-								disabled={loading || cameraActive}
-								accessibilityRole='button'
-								labelStyle={{ color: 'white' }}>
-								Wybierz z galerii
-							</Button>
+							<>
+								<Button
+									mode='contained'
+									onPress={() => {
+										setCarCameraMode(false)
+										pickImage()
+									}}
+									style={styles.button}
+									icon='image'
+									disabled={loading || cameraActive}
+									accessibilityRole='button'
+									labelStyle={{ color: 'white' }}>
+									Wybierz z galerii
+								</Button>
+								<Button
+									mode='contained'
+									onPress={() => {
+										if (image) {
+											setImage(null)
+										}
+										setCarCameraMode(true)
+										setTakePictureActive(true)
+									}}
+									style={styles.button}
+									icon='camera'
+									disabled={loading || cameraActive || takePictureActive}
+									accessibilityRole='button'
+									labelStyle={{ color: 'white' }}>
+									Otwórz aparat
+								</Button>
+							</>
 						)}
 						{detectionMode === 'microwave' && (
 							<Button
@@ -800,6 +825,7 @@ export default function App() {
 											resizeMode='contain'
 										/>
 										{objectDetection &&
+											(Platform.OS === 'ios' || imageSource !== 'camera') &&
 											objectDetection.map((obj, index) => (
 												<View
 													key={index}
@@ -823,7 +849,7 @@ export default function App() {
 								</TouchableOpacity>
 							</View>
 
-							{detectionMode == 'car' && (
+							{detectionMode == 'car' && !carCameraMode && (
 								<Button
 									mode='contained'
 									onPress={() => {
@@ -836,7 +862,7 @@ export default function App() {
 							)}
 							{error && (
 								<>
-									{detectionMode === 'microwave' && (
+									{(detectionMode === 'microwave' || (detectionMode === 'car' && imageSource === 'camera')) && (
 										<Button
 											mode='contained'
 											onPress={handleRetakePhoto}
@@ -886,20 +912,21 @@ export default function App() {
 							response.detectedText ||
 							(response.detectedObjects && response.detectedObjects.length > 0)) && (
 							<View style={styles.responseContainer}>
-								{response && (
-									<Button
-										mode='contained'
-										onPress={handleRetakePhoto}
-										style={[styles.button, { marginBottom: 10 }]}
-										icon='camera'
-										disabled={loading || cameraActive || takePictureActive}
-										importantForAccessibility={loading ? 'no-hide-descendants' : 'yes'}
-										accessibilityElementsHidden={loading ? true : false}
-										accessibilityRole='button'
-										labelStyle={{ color: 'white' }}>
-										Zrob zdjęcie ponownie
-									</Button>
-								)}
+								{(detectionMode === 'microwave' || (detectionMode === 'car' && imageSource === 'camera')) &&
+									response && (
+										<Button
+											mode='contained'
+											onPress={handleRetakePhoto}
+											style={[styles.button, { marginBottom: 10 }]}
+											icon='camera'
+											disabled={loading || cameraActive || takePictureActive}
+											importantForAccessibility={loading ? 'no-hide-descendants' : 'yes'}
+											accessibilityElementsHidden={loading ? true : false}
+											accessibilityRole='button'
+											labelStyle={{ color: 'white' }}>
+											Zrob zdjęcie ponownie
+										</Button>
+									)}
 								<Card style={styles.responseCard}>
 									<Card.Content>
 										{detectionMode === 'microwave' && (
