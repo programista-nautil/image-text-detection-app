@@ -78,10 +78,12 @@ export default function App() {
 	}, [error])
 
 	useEffect(() => {
-		if (loading) {
-			AccessibilityInfo.announceForAccessibility('Ładowanie rozpoczęte')
-		} else if (!loading && response) {
-			AccessibilityInfo.announceForAccessibility('Ładowanie zakończone')
+		if (detectionMode !== 'microwave') {
+			if (loading) {
+				AccessibilityInfo.announceForAccessibility('Ładowanie rozpoczęte')
+			} else if (!loading && response) {
+				AccessibilityInfo.announceForAccessibility('Ładowanie zakończone')
+			}
 		}
 	}, [loading])
 
