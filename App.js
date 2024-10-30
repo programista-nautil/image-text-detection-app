@@ -78,12 +78,10 @@ export default function App() {
 	}, [error])
 
 	useEffect(() => {
-		if (detectionMode !== 'microwave') {
-			if (loading) {
-				AccessibilityInfo.announceForAccessibility('Ładowanie rozpoczęte')
-			} else if (!loading && response) {
-				AccessibilityInfo.announceForAccessibility('Ładowanie zakończone')
-			}
+		if (loading) {
+			AccessibilityInfo.announceForAccessibility('Ładowanie rozpoczęte')
+		} else if (!loading && response) {
+			AccessibilityInfo.announceForAccessibility('Ładowanie zakończone')
 		}
 	}, [loading])
 
@@ -111,13 +109,13 @@ export default function App() {
 		if (response) {
 			if (detectionMode === 'microwave' && response.detectedText) {
 				// Odczytaj tekst wykryty w trybie microwave
-				Speech.speak(response.detectedText)
+				speakText(response.detectedText)
 			} else if (detectionMode === 'car' && response.data) {
 				// Sprawdzamy, czy response.data istnieje
 				// Odczytaj numer rejestracyjny i wagę w trybie car
 				const licensePlate = response.data.license_plate || 'Brak numeru rejestracyjnego'
 				const weight = response.data.weight ? `Waga: ${response.data.weight}` : 'Brak wagi'
-				Speech.speak(`Wykryty pojazd. Numer rejestracyjny: ${licensePlate}. ${weight}`)
+				speakText(`Wykryty pojazd. Numer rejestracyjny: ${licensePlate}. ${weight}`)
 			}
 		}
 	}, [response, detectionMode])
@@ -170,7 +168,7 @@ export default function App() {
 					default:
 						modeMessage = 'Wybrano nieznany tryb'
 				}
-				Speech.speak(modeMessage) // Odczytaj wybrany tryb
+				speakText(modeMessage) // Odczytaj wybrany tryb
 			}
 		})
 	}
@@ -243,7 +241,7 @@ export default function App() {
 				mode: detectionMode,
 			}
 
-			const detectRes = await axios.post('https://debogorze.pl/detect_and_save_marker', data, {
+			const detectRes = await axios.post('http://145.239.92.37:8000/detect_and_save_marker', data, {
 				headers: {
 					'Content-Type': 'application/json',
 				},
@@ -289,7 +287,7 @@ export default function App() {
 
 					if (message) {
 						newResponses.push(message)
-						Speech.speak(message)
+						speakText(message)
 					}
 				})
 
@@ -304,7 +302,7 @@ export default function App() {
 		} catch (error) {
 			console.error('Error detectArUcoMarker: ', error)
 			setError('Error during marker detection')
-			Speech.speak('Wystąpił błąd podczas wykrywania markera.')
+			speakText('Wystąpił błąd podczas wykrywania markera.')
 		} finally {
 			setLoading(false) // Wyłączamy ładowanie niezależnie od wyniku
 		}
@@ -320,7 +318,7 @@ export default function App() {
 				mode: detectionMode, // Tryb jest zawsze "microwave" tutaj
 			}
 
-			const detectRes = await axios.post('https://debogorze.pl/detect_and_save', data, {
+			const detectRes = await axios.post('http://145.239.92.37:8000/detect_and_save', data, {
 				headers: {
 					'Content-Type': 'application/json',
 				},
@@ -329,12 +327,12 @@ export default function App() {
 			setResponse(detectRes.data)
 			if (!detectRes.data.detectedText) {
 				setError('Brak wykrytego tekstu.')
-				Speech.speak('Brak wykrytego tekstu.')
+				speakText('Brak wykrytego tekstu.')
 			}
 		} catch (error) {
 			console.error('Error analyzeTextFromImage: ', error.message, error.response ? error.response.data : null)
 			setError('Error during marker detection')
-			Speech.speak('Wystąpił błąd podczas wykrywania markera.')
+			speakText('Wystąpił błąd podczas wykrywania markera.')
 			setLoading(false)
 		} finally {
 			setLoading(false)
@@ -374,7 +372,7 @@ export default function App() {
 					mode: detectionMode, // Send the detection mode to the backend
 				}
 
-				const detectRes = await axios.post('https://debogorze.pl/detect_and_save', data, {
+				const detectRes = await axios.post('http://145.239.92.37:8000/detect_and_save', data, {
 					headers: {
 						'Content-Type': 'application/json',
 					},
@@ -385,7 +383,7 @@ export default function App() {
 			} catch (error) {
 				console.error('Error analyzeImage: ', error.message, error.response ? error.response.data : null)
 				setError('Error during marker detection')
-				Speech.speak('Wystąpił błąd podczas wykrywania markera.')
+				speakText('Wystąpił błąd podczas wykrywania markera.')
 				setLoading(false)
 			} finally {
 				setLoading(false)
@@ -397,7 +395,7 @@ export default function App() {
 		if (!selectedImageUri) {
 			const errorMessage = 'Brak obrazu do przesłania.'
 			setError(errorMessage)
-			Speech.speak(errorMessage)
+			speakText(errorMessage)
 			return
 		}
 
@@ -412,11 +410,15 @@ export default function App() {
 
 		try {
 			// Include detection mode in request
-			const detectObjectsRes = await axios.post(`https://debogorze.pl/detect_objects?mode=${detectionMode}`, formData, {
-				headers: {
-					'Content-Type': 'multipart/form-data',
-				},
-			})
+			const detectObjectsRes = await axios.post(
+				`http://145.239.92.37:8000/detect_objects?mode=${detectionMode}`,
+				formData,
+				{
+					headers: {
+						'Content-Type': 'multipart/form-data',
+					},
+				}
+			)
 
 			if (detectObjectsRes.data.length === 0) {
 				const noObjectsMessage = 'Nie wykryto żadnych obiektów na zdjęciu.'
@@ -429,7 +431,7 @@ export default function App() {
 				setObjectDetection(detectObjectsRes.data)
 				setError(null)
 				if (detectionMode === 'microwave') {
-					Speech.speak('Wykryto ekspres, analizuje tekst.')
+					speakText('Wykryto ekspres, analizuje tekst.')
 				}
 			}
 
@@ -440,7 +442,7 @@ export default function App() {
 				mode: detectionMode,
 			}
 
-			const detectRes = await axios.post('https://debogorze.pl/detect_and_save', data, {
+			const detectRes = await axios.post('http://145.239.92.37:8000/detect_and_save', data, {
 				headers: {
 					'Content-Type': 'application/json',
 				},
@@ -449,7 +451,7 @@ export default function App() {
 		} catch (error) {
 			console.error('Error danalyzeImage: ', error.message, error.response ? error.response.data : null)
 			setError('Error during marker detection')
-			Speech.speak('Wystąpił błąd podczas wykrywania markera.')
+			speakText('Wystąpił błąd podczas wykrywania markera.')
 			setLoading(false)
 		} finally {
 			setLoading(false)
@@ -492,7 +494,7 @@ export default function App() {
 					type: 'image/jpeg',
 				})
 
-				const detectRes = await axios.post(`https://debogorze.pl/detect_objects?mode=${detectionMode}`, formData, {
+				const detectRes = await axios.post(`http://145.239.92.37:8000/detect_objects?mode=${detectionMode}`, formData, {
 					headers: {
 						'Content-Type': 'multipart/form-data',
 					},
@@ -508,7 +510,7 @@ export default function App() {
 					setLoading(false)
 					// W przypadku trybu 'car' lub 'microwave', uruchom analizę obrazu
 					if (detectionMode === 'car' || detectionMode === 'microwave') {
-						Speech.speak('Wykryto obiekt. Analizuję obraz.')
+						speakText('Wykryto obiekt. Analizuję obraz.')
 						analyzeImage() // Analiza obrazu, jeśli są wykryte obiekty
 					}
 					if (detectionMode === 'all') {
@@ -516,12 +518,12 @@ export default function App() {
 					}
 				} else {
 					setObjectDetection([])
-					Speech.speak('Nie wykryto żadnych obiektów.')
+					speakText('Nie wykryto żadnych obiektów.')
 				}
 			} catch (error) {
 				console.error('Error detectObjects: ', error.message, error.response ? error.response.data : null)
 				setError('Error during marker detection')
-				Speech.speak('Wystąpił błąd podczas wykrywania markera.')
+				speakText('Wystąpił błąd podczas wykrywania markera.')
 				setLoading(false)
 			} finally {
 				setLoading(false) // Upewnij się, że ładowanie zostaje zatrzymane
@@ -537,7 +539,7 @@ export default function App() {
 			Speech.stop()
 			setIsSpeaking(true) // Oznacz, że zaczynamy czytać
 
-			Speech.speak(objectNames, {
+			speakText(objectNames, {
 				onDone: () => {
 					setIsSpeaking(false) // Oznacz, że odczyt się zakończył
 					resolve() // Informuj, że zakończono odczyt
@@ -621,6 +623,18 @@ export default function App() {
 			width: (topRight[0] - topLeft[0]) * scaleX,
 			height: (bottomLeft[1] - topLeft[1]) * scaleY,
 		}
+	}
+
+	const speakText = text => {
+		AccessibilityInfo.isScreenReaderEnabled().then(isScreenReaderEnabled => {
+			if (isScreenReaderEnabled) {
+				// Jeśli czytnik ekranu jest włączony, odczytaj tekst przez czytnik ekranu
+				AccessibilityInfo.announceForAccessibility(text)
+			} else {
+				// Jeśli czytnik ekranu nie jest włączony, użyj Speech.speak
+				Speech.speak(text)
+			}
+		})
 	}
 
 	return (
