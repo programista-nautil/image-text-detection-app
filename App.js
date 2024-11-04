@@ -19,6 +19,7 @@ import axios from 'axios'
 import { Provider as PaperProvider, Button, Card, ActivityIndicator } from 'react-native-paper'
 import Header from './components/Header'
 import { MaterialIcons } from '@expo/vector-icons'
+import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake'
 
 export default function App() {
 	const [image, setImage] = useState(null)
@@ -44,6 +45,7 @@ export default function App() {
 	})
 	const [carCameraMode, setCarCameraMode] = useState(false)
 	const [imageSource, setImageSource] = useState('')
+	const [carDetectionMode, setCarDetectionMode] = useState(false)
 
 	const aspectRatio = 4 / 3
 
@@ -184,6 +186,10 @@ export default function App() {
 			default:
 				return 'Aplikacja służy do wykrywania obiektów na zdjęciach oraz analizy ich zawartości.'
 		}
+	}
+
+	const handleCarDetectionMode = () => {
+		activateKeepAwakeAsync()
 	}
 
 	const pickImage = async () => {
@@ -554,6 +560,10 @@ export default function App() {
 
 	// Function to stop the real-time detection
 	const stopDetection = () => {
+		if (carDetectionMode) {
+			deactivateKeepAwake()
+			setCarDetectionMode(false)
+		}
 		Speech.stop()
 		clearInterval(detectionIntervalRef.current)
 		setLoading(false)
@@ -725,6 +735,24 @@ export default function App() {
 									accessibilityRole='button'
 									labelStyle={{ color: 'white' }}>
 									Otwórz aparat
+								</Button>
+								<Button
+									mode='contained'
+									onPress={() => {
+										if (image) {
+											setImage(null)
+										}
+										setCarCameraMode(true)
+										setTakePictureActive(true)
+										handleCarDetectionMode()
+										setCarDetectionMode(true)
+									}}
+									style={styles.button}
+									icon='camera'
+									disabled={loading || cameraActive || takePictureActive}
+									accessibilityRole='button'
+									labelStyle={{ color: 'white' }}>
+									Tryb detekcji
 								</Button>
 							</>
 						)}
