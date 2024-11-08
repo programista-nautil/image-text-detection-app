@@ -360,14 +360,13 @@ export default function App() {
 	const analyzeImage = async () => {
 		if (cameraRef.current) {
 			try {
-				// Stop real-time object detection and camera feed
-				clearInterval(detectionIntervalRef.current)
-
 				// Capture the last frame from the camera and set it as the static image
 				let photo = await cameraRef.current.takePictureAsync()
 				const selectedImage = photo.uri
-				setImage(selectedImage) // Set the captured image as the static image
-				setCameraActive(false) // Stop the camera
+				if (!carDetectionMode) {
+					setImage(selectedImage) // Set the captured image as the static image
+					setCameraActive(false) // Stop the camera
+				}
 
 				// Process the image
 				setLoading(true)
@@ -383,9 +382,12 @@ export default function App() {
 						'Content-Type': 'application/json',
 					},
 				})
+				console.log('Wysylam zdjecie do analizy')
 
 				// Handle the response
-				setResponse(detectRes.data)
+				if (!carDetectionMode) {
+					setResponse(detectRes.data)
+				}
 			} catch (error) {
 				console.error('Error analyzeImage: ', error.message, error.response ? error.response.data : null)
 				setError('Error during marker detection')
@@ -393,6 +395,13 @@ export default function App() {
 				setLoading(false)
 			} finally {
 				setLoading(false)
+
+				// Wznowienie cyklicznej detekcji w trybie carDetectionMode
+				if (carDetectionMode) {
+					setTimeout(() => {
+						startCarDetection() // Ponownie uruchamia interwał detekcji
+					}, 7000) // Opóźnienie na 7 sekund lub inny czas w ms
+				}
 			}
 		}
 	}
@@ -481,9 +490,29 @@ export default function App() {
 		}
 	}
 
+	const startCarDetection = async () => {
+		if (cameraRef.current && !isSpeaking) {
+			setLoading(true)
+			await detectObjects() // Funkcja wykrywająca obiekty samochodowe
+			setLoading(false)
+
+			// Ustaw interwał dla trybu detekcji samochodów
+			detectionIntervalRef.current = setInterval(
+				async () => {
+					if (!isSpeaking) {
+						await detectObjects() // Wykrywaj obiekty samochodowe co kilka sekund
+					}
+				},
+				Platform.OS === 'ios' ? 5000 : 7000
+			)
+		}
+	}
+
 	const detectObjects = async () => {
 		if (cameraRef.current) {
 			try {
+				// Zatrzymaj interwał przed zrobieniem zdjęcia
+				clearInterval(detectionIntervalRef.current)
 				setLoading(true)
 				let photo = await cameraRef.current.takePictureAsync()
 				const selectedImage = photo.uri
@@ -743,9 +772,9 @@ export default function App() {
 											setImage(null)
 										}
 										setCarCameraMode(true)
-										setTakePictureActive(true)
 										handleCarDetectionMode()
 										setCarDetectionMode(true)
+										setCameraActive(true)
 									}}
 									style={styles.button}
 									icon='camera'
@@ -815,7 +844,13 @@ export default function App() {
 							<Camera
 								style={{ width: width - 40, height: cameraHeight }}
 								ref={cameraRef}
-								onCameraReady={startDetection}>
+								onCameraReady={() => {
+									if (carDetectionMode) {
+										startCarDetection() // Wywołaj funkcję startCarDetection
+									} else {
+										startDetection() // Wywołaj domyślną funkcję startDetection
+									}
+								}}>
 								{objectDetection &&
 									Platform.OS === 'ios' &&
 									objectDetection.slice(0, detectionMode === 'all' ? 4 : 1).map((obj, index) => (
