@@ -1,9 +1,10 @@
 {
-  "hostType": "lan",
+  "hostType": "tunnel",
   "lanType": "ip",
-  "dev": false,
-  "minify": true,
+  "dev": true,
+  "minify": false,
   "urlRandomness": "IIdbdeA",
   "https": false,
-  "scheme": null
+  "scheme": "com.daamian.imagetextdetectionapp",
+  "devClient": false
 }
