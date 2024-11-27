@@ -20,6 +20,17 @@ import { Provider as PaperProvider, Button, Card, ActivityIndicator } from 'reac
 import Header from './components/Header'
 import { MaterialIcons } from '@expo/vector-icons'
 import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake'
+import {
+	Camera as VisonCamera,
+	useCameraDevice,
+	useCameraPermission,
+	useFrameProcessor,
+	runAtTargetFps,
+} from 'react-native-vision-camera'
+import { useSharedValue, runOnJS } from 'react-native-reanimated'
+import { crop } from 'vision-camera-cropper'
+import { useRunOnJS } from 'react-native-worklets-core'
+import CameraView from './components/CameraView'
 
 export default function App() {
 	const [image, setImage] = useState(null)
@@ -27,11 +38,12 @@ export default function App() {
 	const [response, setResponse] = useState(null)
 	const [loading, setLoading] = useState(false)
 	const [error, setError] = useState(null)
-	const [objectDetection, setObjectDetection] = useState(null)
+	const [objectDetection, setObjectDetection] = useState([])
 	const [cameraActive, setCameraActive] = useState(false)
-	const [hasPermission, setHasPermission] = useState(null)
-	const [detectionMode, setDetectionMode] = useState('')
+	const { hasPermission, requestPermission } = useCameraPermission()
+	const [detectionMode, setDetectionMode] = useState('car')
 	const cameraRef = useRef(null)
+	const device = useCameraDevice('back')
 	const detectionIntervalRef = useRef(null)
 	const { width } = Dimensions.get('window')
 	const [takePictureActive, setTakePictureActive] = useState(false)
@@ -46,6 +58,11 @@ export default function App() {
 	const [carCameraMode, setCarCameraMode] = useState(false)
 	const [imageSource, setImageSource] = useState('')
 	const [carDetectionMode, setCarDetectionMode] = useState(false)
+	const lastFrameSent = useRef(0)
+	const [isDetecting, setIsDetecting] = useState(false)
+	const [isDetectionRunning, setIsDetectionRunning] = useState(false)
+	const [isCameraInitialized, setIsCameraInitialized] = useState(false)
+	const isDetectionRunningRef = useRef(false)
 
 	const aspectRatio = 4 / 3
 
@@ -68,6 +85,12 @@ export default function App() {
 			AccessibilityInfo.setAccessibilityFocus(reactTag)
 		}
 	}
+
+	useEffect(() => {
+		if (detectionMode === 'car' && cameraActive) {
+			takePicture() // Rozpocznij robienie zdjęć w trybie car
+		}
+	}, [detectionMode, cameraActive])
 
 	// Focus on error
 	useEffect(() => {
@@ -95,8 +118,10 @@ export default function App() {
 
 	useEffect(() => {
 		;(async () => {
-			const { status } = await Camera.requestCameraPermissionsAsync()
-			setHasPermission(status === 'granted')
+			const cameraPermission = await requestPermission()
+			if (!cameraPermission) {
+				alert('Camera permission are required.')
+			}
 		})()
 	}, [])
 
@@ -122,12 +147,25 @@ export default function App() {
 		}
 	}, [response, detectionMode])
 
+	useEffect(() => {
+		if (detectionMode === 'car' && cameraActive && isCameraInitialized) {
+			startCarDetectionLoop() // Rozpocznij robienie zdjęć w trybie car
+		}
+	}, [detectionMode, cameraActive, isCameraInitialized])
+
+	if (!device)
+		return (
+			<View>
+				<Text>No camera device found</Text>
+			</View>
+		)
+
 	const handleModeChange = newMode => {
 		// Usunięcie zdjęcia i danych po zmianie trybu
 		Speech.stop()
 		setImage(null)
 		setResponse(null)
-		setObjectDetection(null)
+		setObjectDetection([])
 		setError(null)
 
 		if (cameraActive || takePictureActive) {
@@ -136,6 +174,7 @@ export default function App() {
 			setCameraActive(false)
 		}
 
+		console.log(newMode)
 		// Zaktualizuj tryb detekcji
 		setDetectionMode(newMode)
 
@@ -188,7 +227,7 @@ export default function App() {
 		}
 	}
 
-	const handleCarDetectionMode = () => {
+	const keepScreenAwake = () => {
 		activateKeepAwakeAsync()
 	}
 
@@ -203,7 +242,7 @@ export default function App() {
 			const selectedImage = result.assets[0].uri
 			setImage(selectedImage)
 			setImageSource('gallery')
-			setObjectDetection(null)
+			setObjectDetection([])
 			setResponse(null)
 			setError(null)
 			Image.getSize(selectedImage, (imgWidth, imgHeight) => {
@@ -214,11 +253,13 @@ export default function App() {
 
 	const takePicture = async () => {
 		if (cameraRef.current) {
-			let photo = await cameraRef.current.takePictureAsync()
-			const selectedImage = photo.uri
+			const photo = await cameraRef.current.takePhoto({
+				flash: 'off', // opcjonalnie: 'on' lub 'off'
+			})
+			const selectedImage = `file://${photo.path}` // Ścieżka do zapisanego zdjęcia
 			setImage(selectedImage)
 			setImageSource('camera')
-			setObjectDetection(null)
+			setObjectDetection([])
 			setResponse(null)
 			setError(null)
 			Image.getSize(selectedImage, (imgWidth, imgHeight) => {
@@ -226,11 +267,10 @@ export default function App() {
 			})
 
 			if (detectionMode === 'microwave') {
-				// W trybie "microwave" analizujemy tylko tekst
-				//analyzeTextFromImage(selectedImage)
 				detectArUcoMarker(selectedImage)
-			} else {
-				uploadImage(selectedImage) // Dla innych trybów standardowy upload obrazu
+			} else if (detectionMode === 'car') {
+				if (takePictureActive) uploadImage(selectedImage)
+				//if (cameraActive) await uploadImage(selectedImage)
 			}
 			setTakePictureActive(false)
 		}
@@ -357,52 +397,37 @@ export default function App() {
 	}
 
 	// Function to analyze and send data to detect_and_save endpoint
-	const analyzeImage = async () => {
-		if (cameraRef.current) {
-			try {
-				// Capture the last frame from the camera and set it as the static image
-				let photo = await cameraRef.current.takePictureAsync()
-				const selectedImage = photo.uri
-				if (!carDetectionMode) {
-					setImage(selectedImage) // Set the captured image as the static image
-					setCameraActive(false) // Stop the camera
-				}
-
-				// Process the image
-				setLoading(true)
-				const base64Image = await getBase64(selectedImage)
-
-				const data = {
-					image: base64Image,
-					mode: detectionMode, // Send the detection mode to the backend
-				}
-
-				const detectRes = await axios.post('http://145.239.92.37:8000/detect_and_save', data, {
-					headers: {
-						'Content-Type': 'application/json',
-					},
-				})
-				console.log('Wysylam zdjecie do analizy')
-
-				// Handle the response
-				if (!carDetectionMode) {
-					setResponse(detectRes.data)
-				}
-			} catch (error) {
-				console.error('Error analyzeImage: ', error.message, error.response ? error.response.data : null)
-				setError('Error during marker detection')
-				speakText('Wystąpił błąd podczas wykrywania markera.')
-				setLoading(false)
-			} finally {
-				setLoading(false)
-
-				// Wznowienie cyklicznej detekcji w trybie carDetectionMode
-				if (carDetectionMode) {
-					setTimeout(() => {
-						startCarDetection() // Ponownie uruchamia interwał detekcji
-					}, 7000) // Opóźnienie na 7 sekund lub inny czas w ms
-				}
+	const analyzeImage = async base64Image => {
+		try {
+			const selectedImage = `data:image/jpeg;base64,${base64Image}`
+			if (!carDetectionMode) {
+				setImage(selectedImage) // Set the captured image as the static image
+				setCameraActive(false) // Stop the camera
 			}
+
+			// Process the image
+			setLoading(true)
+
+			const data = {
+				image: base64Image,
+				mode: detectionMode, // Send the detection mode to the backend
+			}
+
+			const detectRes = await axios.post('http://145.239.92.37:8000/detect_and_save', data, {
+				headers: {
+					'Content-Type': 'application/json',
+				},
+			})
+			console.log('Wysylam zdjecie do analizy', detectRes.data)
+
+			setResponse(detectRes.data)
+		} catch (error) {
+			console.error('Error analyzeImage: ', error.message, error.response ? error.response.data : null)
+			setError('Error during marker detection')
+			speakText('Wystąpił błąd podczas wykrywania markera.')
+			setLoading(false)
+		} finally {
+			setLoading(false)
 		}
 	}
 
@@ -439,7 +464,7 @@ export default function App() {
 				const noObjectsMessage = 'Nie wykryto żadnych obiektów na zdjęciu.'
 				setError(noObjectsMessage)
 				//Speech.speak(noObjectsMessage)
-				setObjectDetection(null)
+				setObjectDetection([])
 				setLoading(false)
 				return
 			} else {
@@ -470,8 +495,157 @@ export default function App() {
 			setLoading(false)
 		} finally {
 			setLoading(false)
+			// if (detectionMode === 'car' && cameraActive) {
+			// 	setTimeout(() => {
+			// 		takePicture() // Zrób kolejne zdjęcie po określonym czasie
+			// 	}, 15000) // Opóźnienie 15 sekund
+			// }
 		}
 	}
+
+	const startCarDetectionLoop = async () => {
+		if (!cameraRef.current || !isCameraInitialized || !cameraActive || isDetectionRunning) {
+			console.log('Camera not initialized, active, or detection already running')
+			return
+		}
+
+		isDetectionRunningRef.current = true
+		setIsDetectionRunning(true)
+		console.log('Starting car detection loop')
+		while (isDetectionRunningRef.current) {
+			try {
+				if (!cameraRef.current || !cameraActive) {
+					console.log('Camera reference is null or camera is not active, stopping detection loop')
+					break
+				}
+				if (cameraRef.current) {
+					const photo = await cameraRef.current.takePhoto({
+						flash: 'off',
+					})
+
+					const selectedImage = `file://${photo.path}`
+					setImage(selectedImage)
+
+					await uploadImage(selectedImage)
+				}
+			} catch (error) {
+				if (error.message.includes('Camera is closed')) {
+					console.log('Camera was closed during detection loop, stopping gracefully')
+					break // Wyjdź z pętli, jeśli kamera jest zamknięta
+				}
+				console.error('Error in detection loop: ', error)
+			}
+		}
+	}
+
+	const stopCarDetectionLoop = () => {
+		isDetectionRunningRef.current = false
+		setIsDetectionRunning(false)
+		setCameraActive(false)
+	}
+
+	const processFrameDataJS = useRunOnJS(async base64Image => {
+		if (isDetecting) return // Jeśli detekcja jest w toku, zakończ funkcję
+
+		setIsDetecting(true) // Ustaw isDetecting na true
+		setLoading(true)
+		try {
+			const selectedImage = `data:image/jpeg;base64,${base64Image}`
+			setImage(selectedImage)
+
+			// Pobranie rozmiarów obrazu
+			Image.getSize(
+				selectedImage,
+				(imgWidth, imgHeight) => {
+					setImageSize({ width: imgWidth, height: imgHeight })
+				},
+				error => {
+					console.error('Błąd przy pobieraniu rozmiarów obrazu:', error)
+				}
+			)
+
+			// Przygotowanie danych w formacie FormData
+			let formData = new FormData()
+			formData.append('file', {
+				uri: selectedImage,
+				name: 'realtime.jpg',
+				type: 'image/jpeg',
+			})
+
+			// Wyślij dane do API
+
+			console.log('ustawiony mode -' + detectionMode)
+			const detectRes = await axios.post(`http://145.239.92.37:8000/detect_objects?mode=${detectionMode}`, formData, {
+				headers: {
+					'Content-Type': 'multipart/form-data',
+				},
+			})
+			// Obsłuż odpowiedź API
+			let detectionData = detectRes.data
+			console.log('Detection Data ', JSON.stringify(detectionData))
+
+			if (typeof detectionData === 'string') {
+				detectionData = JSON.parse(detectionData) // Parsowanie JSON, jeśli konieczne
+			}
+
+			if (detectionData.length > 0) {
+				setLoading(false)
+				setObjectDetection([...detectionData])
+
+				if (detectionMode === 'car' || detectionMode === 'microwave') {
+					speakText('Wykryto obiekt. Analizuję obraz.')
+					await analyzeImage(base64Image) // Analiza obrazu, jeśli są wykryte obiekty
+				} else if (detectionMode === 'all') {
+					await readDetectedObjects() // Czekaj na zakończenie mowy
+				}
+			} else {
+				setObjectDetection([])
+				speakText('Nie wykryto żadnych obiektów.')
+			}
+		} catch (error) {
+			console.error('Error processFrameData: ', error.message, error.response ? error.response.data : null)
+			setError('Error during marker detection')
+			speakText('Wystąpił błąd podczas wykrywania markera.')
+		} finally {
+			setLoading(false) // Upewnij się, że ładowanie zostaje zatrzymane
+			setIsDetecting(false)
+
+			if (detectionMode === 'car') {
+				setTimeout(() => {
+					setCameraActive(true) // Ustaw cameraActive na true po określonym czasie
+				}, 15000) // Opóźnienie 15 sekund
+			}
+		}
+	})
+
+	const frameProcessor = useFrameProcessor(async frame => {
+		'worklet'
+
+		// Region wycinania w procentach
+		const cropRegion = {
+			left: 0,
+			top: 0,
+			width: 100,
+			height: 100, // Wytnij całą klatkę
+		}
+
+		const currentTime = Date.now()
+
+		// Sprawdź, czy minęło 15 sekund od ostatniego wysłania i czy detekcja nie jest w toku
+		if ((lastFrameSent.current === 0 || currentTime - lastFrameSent.current >= 15000) && !isDetecting) {
+			// Aktualizuj czas wysłania klatki
+			lastFrameSent.current = currentTime
+
+			const result = crop(frame, {
+				cropRegion,
+				includeImageBase64: true, // Włącz Base64
+				saveAsFile: false, // Nie zapisuj jako plik
+			})
+
+			// Przekaż Base64 do funkcji przetwarzania
+			processFrameDataJS(result.base64)
+		}
+	}, [])
 
 	const startDetection = async () => {
 		if (cameraRef.current && !isSpeaking) {
@@ -549,7 +723,7 @@ export default function App() {
 						analyzeImage() // Analiza obrazu, jeśli są wykryte obiekty
 					}
 					if (detectionMode === 'all') {
-						await readDetectedObjects(detectionData) // Czekaj na zakończenie mowy
+						await readDetectedObjects() // Czekaj na zakończenie mowy
 					}
 				} else {
 					setObjectDetection([])
@@ -566,9 +740,9 @@ export default function App() {
 		}
 	}
 
-	const readDetectedObjects = async detectionData => {
+	const readDetectedObjects = () => {
 		return new Promise((resolve, reject) => {
-			const limitedDetectionData = detectionData.slice(0, 4)
+			const limitedDetectionData = objectDetection.slice(0, 4)
 			const objectNames = limitedDetectionData.map(obj => `${obj.name}`).join('. ')
 
 			Speech.stop()
@@ -595,12 +769,13 @@ export default function App() {
 		}
 		Speech.stop()
 		clearInterval(detectionIntervalRef.current)
+		stopCarDetectionLoop()
 		setLoading(false)
 		setTakePictureActive(false)
 		setCameraActive(false)
 		setImage(null)
 		setResponse(null)
-		setObjectDetection(null)
+		setObjectDetection([])
 		setError(null)
 	}
 
@@ -609,7 +784,7 @@ export default function App() {
 		Speech.stop()
 		setImage(null)
 		setResponse(null)
-		setObjectDetection(null)
+		setObjectDetection([])
 		setError(null)
 		clearInterval(detectionIntervalRef.current)
 	}
@@ -741,6 +916,7 @@ export default function App() {
 									onPress={() => {
 										setCarCameraMode(false)
 										pickImage()
+										setCarDetectionMode(false)
 									}}
 									style={styles.button}
 									icon='image'
@@ -757,6 +933,7 @@ export default function App() {
 										}
 										setCarCameraMode(true)
 										setTakePictureActive(true)
+										setCarDetectionMode(false)
 									}}
 									style={styles.button}
 									icon='camera'
@@ -772,7 +949,7 @@ export default function App() {
 											setImage(null)
 										}
 										setCarCameraMode(true)
-										handleCarDetectionMode()
+										keepScreenAwake()
 										setCarDetectionMode(true)
 										setCameraActive(true)
 									}}
@@ -818,39 +995,59 @@ export default function App() {
 						)}
 					</View>
 					{takePictureActive && (
-						<Camera style={{ width: width - 40, height: cameraHeight }} ref={cameraRef}>
-							<View style={styles.cameraButtonContainer}>
-								<Pressable
-									ref={takePictureButtonRef}
-									onPress={takePicture}
-									style={styles.cameraIconButton}
-									accessibilityLabel='Zrób zdjęcie' // Etykieta dla VoiceOver
-									accessibilityRole='button'>
-									<MaterialIcons name='camera' size={35} color='white' />
-								</Pressable>
+						<>
+							<View>
+								<VisonCamera
+									style={[styles.camera, { position: 'relative' }]}
+									ref={cameraRef}
+									device={device}
+									isActive={true}
+									photo={true} // umożliwia robienie zdjęć
+									onInitialized={() => console.log('Camera initialized')}></VisonCamera>
+								<TouchableOpacity
+									style={styles.closeButton}
+									onPress={stopDetection}
+									accessibilityLabel='Wyłącz aparat'
+									accessibilityRole='button'
+									disabled={loading}>
+									<MaterialIcons name='close' size={24} color='white' />
+								</TouchableOpacity>
+								{/* Dodaj przycisk zrobienia zdjęcia */}
+								<View style={styles.cameraButtonContainer}>
+									<Pressable
+										onPress={takePicture}
+										style={styles.cameraIconButton}
+										accessibilityLabel='Zrób zdjęcie'
+										accessibilityRole='button'>
+										<MaterialIcons name='camera' size={35} color='white' />
+									</Pressable>
+								</View>
 							</View>
-							<TouchableOpacity
-								style={styles.removeButton}
-								onPress={stopDetection}
-								accessibilityLabel='Wyłącz aparat'
-								accessibilityRole='button'
-								disabled={loading}>
-								<MaterialIcons name='close' size={24} color='white' />
-							</TouchableOpacity>
-						</Camera>
+						</>
 					)}
 					{cameraActive ? (
 						<>
-							<Camera
-								style={{ width: width - 40, height: cameraHeight }}
-								ref={cameraRef}
-								onCameraReady={() => {
-									if (carDetectionMode) {
-										startCarDetection() // Wywołaj funkcję startCarDetection
-									} else {
-										startDetection() // Wywołaj domyślną funkcję startDetection
-									}
-								}}>
+							<View>
+								{detectionMode === 'all' && (
+									<VisonCamera
+										style={[styles.camera, { position: 'relative' }]}
+										ref={cameraRef}
+										device={device}
+										isActive={true}
+										frameProcessor={frameProcessor}
+										frameProcessorFps={5} // Ustawienie maksymalnego FPS dla przetwarzania klatek
+										photo={false}></VisonCamera>
+								)}
+								{detectionMode === 'car' && (
+									<CameraView
+										key={`camera-${cameraActive}-${isCameraInitialized}`} // Dynamiczny klucz
+										cameraRef={cameraRef}
+										device={device}
+										isActive={true}
+										onInitialized={() => setIsCameraInitialized(true)}
+									/>
+								)}
+
 								{objectDetection &&
 									Platform.OS === 'ios' &&
 									objectDetection.slice(0, detectionMode === 'all' ? 4 : 1).map((obj, index) => (
@@ -860,16 +1057,15 @@ export default function App() {
 											</View>
 										</View>
 									))}
-								<View style={styles.cameraButtonContainer}>
-									<TouchableOpacity
-										style={styles.removeButton}
-										onPress={stopDetection}
-										accessibilityLabel='Wyłącz aparat'
-										accessibilityRole='button'>
-										<MaterialIcons name='close' size={24} color='white' />
-									</TouchableOpacity>
-								</View>
-							</Camera>
+
+								<TouchableOpacity
+									style={styles.closeButton}
+									onPress={stopDetection}
+									accessibilityLabel='Wyłącz aparat'
+									accessibilityRole='button'>
+									<MaterialIcons name='close' size={24} color='white' />
+								</TouchableOpacity>
+							</View>
 						</>
 					) : image && imageSize.width > 0 && imageSize.height > 0 ? (
 						<>
@@ -972,7 +1168,7 @@ export default function App() {
 					)}
 					{detectionMode === 'all' && objectDetection && cameraActive && loading === false && (
 						<View>
-							{objectDetection && objectDetection.length > 0 ? (
+							{objectDetection.length > 0 ? (
 								<View>
 									<Text style={styles.responseText}>Wykryte obiekty:</Text>
 									{objectDetection.slice(0, 4).map((obj, index) => (
@@ -991,7 +1187,8 @@ export default function App() {
 							response.detectedText ||
 							(response.detectedObjects && response.detectedObjects.length > 0)) && (
 							<View style={styles.responseContainer}>
-								{(detectionMode === 'microwave' || (detectionMode === 'car' && imageSource === 'camera')) &&
+								{(detectionMode === 'microwave' ||
+									(detectionMode === 'car' && imageSource === 'camera' && !carDetectionMode)) &&
 									response && (
 										<Button
 											mode='contained'
@@ -1003,7 +1200,7 @@ export default function App() {
 											accessibilityElementsHidden={loading ? true : false}
 											accessibilityRole='button'
 											labelStyle={{ color: 'white' }}>
-											Zrob zdjęcie ponownie
+											Zrób zdjęcie ponownie
 										</Button>
 									)}
 								<Card style={styles.responseCard}>
@@ -1146,12 +1343,11 @@ const styles = StyleSheet.create({
 		backgroundColor: '#4682B4',
 	},
 	camera: {
-		width: width - 40,
-		height: ((width - 40) * 3) / 3,
+		width: width - 40, // Szerokość kamery
+		height: ((width - 40) * 3.5) / 3, // Wysokość kamery z zachowaniem proporcji
 		borderRadius: 15,
 		overflow: 'hidden',
-		marginTop: 10,
-		zIndex: 1,
+		alignSelf: 'center', // Wyśrodkuj kamerę w kontenerze
 	},
 	cameraIconButton: {
 		marginBottom: 15,
@@ -1267,5 +1463,25 @@ const styles = StyleSheet.create({
 		flexDirection: 'row',
 		justifyContent: 'space-between',
 		alignItems: 'center',
+	},
+	closeButton: {
+		position: 'absolute',
+		top: 10,
+		right: 10,
+		backgroundColor: 'rgba(255, 0, 0, 0.7)',
+		padding: 5,
+		borderRadius: 15,
+		zIndex: 10, // Upewnij się, że przycisk jest nad kamerą
+	},
+	cameraButtonContainer: {
+		position: 'absolute',
+		bottom: 20,
+		alignSelf: 'center',
+		zIndex: 10, // Nad kamerą
+	},
+	cameraIconButton: {
+		backgroundColor: 'rgba(0,0,0,0.5)',
+		borderRadius: 25,
+		padding: 10,
 	},
 })
