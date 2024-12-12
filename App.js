@@ -269,7 +269,9 @@ export default function App() {
 			if (detectionMode === 'microwave') {
 				detectArUcoMarker(selectedImage)
 			} else if (detectionMode === 'car') {
-				if (takePictureActive) uploadImage(selectedImage)
+				if (takePictureActive) {
+					uploadImage(selectedImage)
+				}
 				//if (cameraActive) await uploadImage(selectedImage)
 			}
 			setTakePictureActive(false)
@@ -488,6 +490,7 @@ export default function App() {
 				},
 			})
 			setResponse(detectRes.data)
+			console.log('Response from detect_and_save endpoint: ', detectRes.data)
 		} catch (error) {
 			console.error('Error danalyzeImage: ', error.message, error.response ? error.response.data : null)
 			setError('Error during marker detection')
@@ -862,48 +865,6 @@ export default function App() {
 						this.scrollView = ref
 					}}
 					onContentSizeChange={() => this.scrollView.scrollToEnd({ animated: true })}>
-					{/* Object detection mode selector using buttons */}
-					<Text style={styles.modeTitle}>Wybierz tryb:</Text>
-					<View style={styles.modeSelector}>
-						<TouchableOpacity
-							style={[styles.modeButton, detectionMode === 'all' ? styles.selectedMode : styles.unselectedMode]}
-							onPress={() => {
-								handleModeChange('all')
-							}}
-							disabled={loading}
-							accessibilityLabel={buttonClicked.all ? '' : 'tryb wszystkie obiekty'}
-							accessibilityRole='button'>
-							<Text style={[styles.modeButtonText, detectionMode === 'all' && styles.selectedModeText]}>
-								Wszystkie obiekty
-							</Text>
-						</TouchableOpacity>
-						<TouchableOpacity
-							style={[styles.modeButton, detectionMode === 'car' ? styles.selectedMode : styles.unselectedMode]}
-							onPress={() => {
-								if (loading) setLoading(false)
-								handleModeChange('car')
-							}}
-							disabled={loading && detectionMode === 'microwave'}
-							accessibilityLabel={buttonClicked.car ? '' : 'tryb tylko pojazdy'}
-							accessibilityRole='button'>
-							<Text style={[styles.modeButtonText, detectionMode === 'car' && styles.selectedModeText]}>
-								Tylko pojazdy
-							</Text>
-						</TouchableOpacity>
-						<TouchableOpacity
-							style={[styles.modeButton, detectionMode === 'microwave' ? styles.selectedMode : styles.unselectedMode]}
-							onPress={() => {
-								if (loading) setLoading(false)
-								handleModeChange('microwave')
-							}}
-							disabled={loading && detectionMode === 'car'}
-							accessibilityLabel={buttonClicked.microwave ? '' : 'tryb wykryj markery'}
-							accessibilityRole='button'>
-							<Text style={[styles.modeButtonText, detectionMode === 'microwave' && styles.selectedModeText]}>
-								Wykryj markery
-							</Text>
-						</TouchableOpacity>
-					</View>
 					<Card style={styles.descriptionCard}>
 						<Card.Content>
 							<Text style={styles.descriptionText}>{getDescriptionText()}</Text>
@@ -912,7 +873,7 @@ export default function App() {
 					<View style={styles.buttonContainer}>
 						{detectionMode === 'car' && (
 							<>
-								<Button
+								{/* <Button
 									mode='contained'
 									onPress={() => {
 										setCarCameraMode(false)
@@ -925,7 +886,7 @@ export default function App() {
 									accessibilityRole='button'
 									labelStyle={{ color: 'white' }}>
 									Wybierz z galerii
-								</Button>
+								</Button> */}
 								<Button
 									mode='contained'
 									onPress={() => {
@@ -980,18 +941,6 @@ export default function App() {
 								accessibilityRole='button'
 								labelStyle={{ color: 'white' }}>
 								Otwórz aparat
-							</Button>
-						)}
-						{detectionMode === 'all' && (
-							<Button
-								mode='contained'
-								onPress={() => setCameraActive(true)}
-								style={styles.button}
-								icon='camera'
-								disabled={loading || takePictureActive}
-								accessibilityRole='button'
-								labelStyle={{ color: 'white' }}>
-								Wykryj obiekty
 							</Button>
 						)}
 					</View>
@@ -1242,6 +1191,7 @@ export default function App() {
 															Numer rejestracyjny: {response.data.license_plate || 'Brak danych'}
 														</Text>
 														<Text style={styles.responseText}>Waga: {response.data.weight || 'Brak danych'}</Text>
+														<Text style={styles.responseText}>Marker ID: {response.data.markers || 'Brak danych'}</Text>
 													</>
 												) : (
 													<Text style={styles.responseText}>Brak danych do wyświetlenia</Text>

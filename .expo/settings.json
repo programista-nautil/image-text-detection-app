@@ -1,10 +1,10 @@
 {
-  "hostType": "lan",
-  "lanType": "ip",
-  "dev": true,
-  "minify": false,
-  "urlRandomness": "IIdbdeA",
-  "https": false,
-  "scheme": "com.daamian.imagetextdetectionapp",
-  "devClient": false
+	"hostType": "lan",
+	"lanType": "ip",
+	"dev": true,
+	"minify": false,
+	"urlRandomness": "IIdbdeA",
+	"https": false,
+	"scheme": "com.daamian.imagetextdetectionapp",
+	"devClient": false
 }
