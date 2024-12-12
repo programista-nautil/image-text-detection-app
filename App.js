@@ -287,7 +287,7 @@ export default function App() {
 				mode: detectionMode,
 			}
 
-			const detectRes = await axios.post('http://145.239.92.37:8000/detect_and_save_marker', data, {
+			const detectRes = await axios.post('http://192.168.0.139:8000/detect_and_save_marker', data, {
 				headers: {
 					'Content-Type': 'application/json',
 				},
@@ -364,7 +364,7 @@ export default function App() {
 				mode: detectionMode, // Tryb jest zawsze "microwave" tutaj
 			}
 
-			const detectRes = await axios.post('http://145.239.92.37:8000/detect_and_save', data, {
+			const detectRes = await axios.post('http://192.168.0.139:8000/detect_and_save', data, {
 				headers: {
 					'Content-Type': 'application/json',
 				},
@@ -413,7 +413,7 @@ export default function App() {
 				mode: detectionMode, // Send the detection mode to the backend
 			}
 
-			const detectRes = await axios.post('http://145.239.92.37:8000/detect_and_save', data, {
+			const detectRes = await axios.post('http://192.168.0.139:8000/detect_and_save', data, {
 				headers: {
 					'Content-Type': 'application/json',
 				},
@@ -451,7 +451,7 @@ export default function App() {
 		try {
 			// Include detection mode in request
 			const detectObjectsRes = await axios.post(
-				`http://145.239.92.37:8000/detect_objects?mode=${detectionMode}`,
+				`http://192.168.0.139:8000/detect_objects?mode=${detectionMode}`,
 				formData,
 				{
 					headers: {
@@ -482,7 +482,7 @@ export default function App() {
 				mode: detectionMode,
 			}
 
-			const detectRes = await axios.post('http://145.239.92.37:8000/detect_and_save', data, {
+			const detectRes = await axios.post('http://192.168.0.139:8000/detect_and_save', data, {
 				headers: {
 					'Content-Type': 'application/json',
 				},
@@ -575,7 +575,7 @@ export default function App() {
 			// Wyślij dane do API
 
 			console.log('ustawiony mode -' + detectionMode)
-			const detectRes = await axios.post(`http://145.239.92.37:8000/detect_objects?mode=${detectionMode}`, formData, {
+			const detectRes = await axios.post(`http://192.168.0.139:8000/detect_objects?mode=${detectionMode}`, formData, {
 				headers: {
 					'Content-Type': 'multipart/form-data',
 				},
@@ -703,7 +703,8 @@ export default function App() {
 					type: 'image/jpeg',
 				})
 
-				const detectRes = await axios.post(`http://145.239.92.37:8000/detect_objects?mode=${detectionMode}`, formData, {
+				//https://debogorze.pl
+				const detectRes = await axios.post(`http://192.168.0.139:8000/detect_objects?mode=${detectionMode}`, formData, {
 					headers: {
 						'Content-Type': 'multipart/form-data',
 					},
