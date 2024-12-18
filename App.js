@@ -433,6 +433,7 @@ export default function App() {
 		}
 	}
 
+	//Obecna funkcja do obslugiwania całego procesu wykrywania zdjęć
 	const uploadImage = async (selectedImageUri = image) => {
 		if (!selectedImageUri) {
 			const errorMessage = 'Brak obrazu do przesłania.'
@@ -461,6 +462,8 @@ export default function App() {
 					},
 				}
 			)
+
+			setResponse(null)
 
 			if (detectObjectsRes.data.length === 0) {
 				const noObjectsMessage = 'Nie wykryto żadnych obiektów na zdjęciu.'
