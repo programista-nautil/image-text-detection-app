@@ -42,6 +42,7 @@ export default function App() {
 	const [cameraActive, setCameraActive] = useState(false)
 	const { hasPermission, requestPermission } = useCameraPermission()
 	const [detectionMode, setDetectionMode] = useState('car')
+	const [isWeightDetection, setIsWeightDetection] = useState(false)
 	const cameraRef = useRef(null)
 	const device = useCameraDevice('back')
 	const detectionIntervalRef = useRef(null)
@@ -63,6 +64,7 @@ export default function App() {
 	const [isDetectionRunning, setIsDetectionRunning] = useState(false)
 	const [isCameraInitialized, setIsCameraInitialized] = useState(false)
 	const isDetectionRunningRef = useRef(false)
+	const [recordId, setRecordId] = useState(null)
 
 	const aspectRatio = 4 / 3
 
@@ -485,6 +487,11 @@ export default function App() {
 			const data = {
 				image: base64Image,
 				mode: detectionMode,
+				isWeightDetection: isWeightDetection,
+			}
+
+			if (recordId) {
+				data.record_id = recordId
 			}
 
 			const detectRes = await axios.post('http://192.168.0.139:8000/detect_and_save', data, {
@@ -492,7 +499,42 @@ export default function App() {
 					'Content-Type': 'application/json',
 				},
 			})
-			setResponse(detectRes.data)
+			const detectData = detectRes.data
+			// Jeśli `record_id` nie istnieje, ustaw nowy
+			if (!recordId && detectData.data?.record_id) {
+				setRecordId(detectData.data.record_id)
+			}
+			console.log('Response from detect_and_save endpoint: ', detectData)
+
+			if (detectData.status === 'Data saved to Google Sheets' || detectData.status === 'Weight detected') {
+				// Przygotowanie danych do synchronizacji
+				const syncData = {
+					link: detectData.data?.image_link || 'Brak',
+					license_plate: detectData.data?.license_plate || 'Brak',
+					weight: detectData.data?.weight || 'Brak',
+					marker_id: detectData.data?.markers?.[0] || 'Brak',
+					record_id: recordId || detectData.data?.record_id,
+				}
+
+				console.log('Preparing to sync data: ', syncData)
+
+				// Wywołanie sync_data
+				const syncRes = await axios.post('http://192.168.0.139:8000/sync_data', syncData, {
+					headers: {
+						'Content-Type': 'application/json',
+					},
+				})
+
+				console.log('Response from sync_data endpoint: ', syncRes.data)
+				if (syncRes.data?.record_id && syncRes.data.record_id !== recordId) {
+					setRecordId(syncRes.data.record_id)
+					console.log('Zaktualizowano record_id:', syncRes.data.record_id)
+				}
+			} else {
+				console.warn('No data to sync.')
+			}
+
+			setResponse(detectData)
 			console.log('Response from detect_and_save endpoint: ', detectRes.data)
 		} catch (error) {
 			console.error('Error danalyzeImage: ', error.message, error.response ? error.response.data : null)
@@ -501,11 +543,6 @@ export default function App() {
 			setLoading(false)
 		} finally {
 			setLoading(false)
-			// if (detectionMode === 'car' && cameraActive) {
-			// 	setTimeout(() => {
-			// 		takePicture() // Zrób kolejne zdjęcie po określonym czasie
-			// 	}, 15000) // Opóźnienie 15 sekund
-			// }
 		}
 	}
 
@@ -868,6 +905,27 @@ export default function App() {
 						this.scrollView = ref
 					}}
 					onContentSizeChange={() => this.scrollView.scrollToEnd({ animated: true })}>
+					<Text style={styles.modeTitle}>Wybierz tryb:</Text>
+					<View style={styles.modeSelector}>
+						<TouchableOpacity
+							style={[styles.modeButton, !isWeightDetection ? styles.selectedMode : styles.unselectedMode]}
+							onPress={() => {
+								setIsWeightDetection(false)
+							}}
+							disabled={loading}
+							accessibilityRole='button'>
+							<Text style={[styles.modeButtonText, !isWeightDetection && styles.selectedModeText]}>Markery</Text>
+						</TouchableOpacity>
+						<TouchableOpacity
+							style={[styles.modeButton, isWeightDetection ? styles.selectedMode : styles.unselectedMode]}
+							onPress={() => {
+								setIsWeightDetection(true)
+							}}
+							disabled={loading}
+							accessibilityRole='button'>
+							<Text style={[styles.modeButtonText, isWeightDetection && styles.selectedModeText]}>Waga</Text>
+						</TouchableOpacity>
+					</View>
 					<Card style={styles.descriptionCard}>
 						<Card.Content>
 							<Text style={styles.descriptionText}>{getDescriptionText()}</Text>
