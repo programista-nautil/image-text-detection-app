@@ -31,6 +31,7 @@ import { useSharedValue, runOnJS } from 'react-native-reanimated'
 import { crop } from 'vision-camera-cropper'
 import { useRunOnJS } from 'react-native-worklets-core'
 import CameraView from './components/CameraView'
+import uuid from 'react-native-uuid'
 
 export default function App() {
 	const [image, setImage] = useState(null)
@@ -488,10 +489,7 @@ export default function App() {
 				image: base64Image,
 				mode: detectionMode,
 				isWeightDetection: isWeightDetection,
-			}
-
-			if (recordId) {
-				data.record_id = recordId
+				record_id: recordId,
 			}
 
 			const detectRes = await axios.post('http://192.168.0.139:8000/detect_and_save', data, {
@@ -500,20 +498,22 @@ export default function App() {
 				},
 			})
 			const detectData = detectRes.data
-			// Jeśli `record_id` nie istnieje, ustaw nowy
+
 			if (!recordId && detectData.data?.record_id) {
-				setRecordId(detectData.data.record_id)
+				setRecordId(detectData.data.record_id) // Zapisz `record_id` zwrócone przez backend
+				console.log('Received recordId from backend:', detectData.data.record_id)
 			}
 			console.log('Response from detect_and_save endpoint: ', detectData)
 
 			if (detectData.status === 'Data saved to Google Sheets' || detectData.status === 'Weight detected') {
 				// Przygotowanie danych do synchronizacji
 				const syncData = {
-					link: detectData.data?.image_link || 'Brak',
-					license_plate: detectData.data?.license_plate || 'Brak',
-					weight: detectData.data?.weight || 'Brak',
-					marker_id: detectData.data?.markers?.[0] || 'Brak',
-					record_id: recordId || detectData.data?.record_id,
+					link: detectData.data?.image_link || '',
+					license_plate: detectData.data?.license_plate || '',
+					weight: detectData.data?.weight || '',
+					marker_id: detectData.data?.markers?.[0] || '',
+					record_id: recordId || detectData.data.record_id,
+					is_new_record: detectData.data?.is_new_record || false,
 				}
 
 				console.log('Preparing to sync data: ', syncData)
@@ -526,9 +526,10 @@ export default function App() {
 				})
 
 				console.log('Response from sync_data endpoint: ', syncRes.data)
-				if (syncRes.data?.record_id && syncRes.data.record_id !== recordId) {
-					setRecordId(syncRes.data.record_id)
-					console.log('Zaktualizowano record_id:', syncRes.data.record_id)
+
+				if (syncRes.data?.message?.includes('zaktualizowany')) {
+					console.log('Rekord zaktualizowany, czyszczenie recordId...')
+					setRecordId(null) // Usuń recordId po zakończeniu synchronizacji
 				}
 			} else {
 				console.warn('No data to sync.')
