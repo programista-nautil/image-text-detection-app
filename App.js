@@ -485,11 +485,23 @@ export default function App() {
 
 			const base64Image = await getBase64(selectedImageUri)
 
+			let currentRecordId = recordId
+			if (!currentRecordId) {
+				try {
+					const getRecordIdRes = await axios.get('http://192.168.0.139:8000/get_record_id')
+					currentRecordId = getRecordIdRes.data.record_id
+					console.log('Fetched recordId from backend:', currentRecordId)
+				} catch (error) {
+					console.warn('No recordId found on backend, generating a new one.')
+					currentRecordId = null
+				}
+			}
+
 			const data = {
 				image: base64Image,
 				mode: detectionMode,
 				isWeightDetection: isWeightDetection,
-				record_id: recordId,
+				record_id: currentRecordId,
 			}
 
 			const detectRes = await axios.post('http://192.168.0.139:8000/detect_and_save', data, {
@@ -499,9 +511,14 @@ export default function App() {
 			})
 			const detectData = detectRes.data
 
-			if (!recordId && detectData.data?.record_id) {
-				setRecordId(detectData.data.record_id) // Zapisz `record_id` zwrócone przez backend
-				console.log('Received recordId from backend:', detectData.data.record_id)
+			if (!currentRecordId && detectData.data?.record_id) {
+				const newRecordId = detectData.data.record_id
+				try {
+					await axios.post('http://192.168.0.139:8000/set_record_id', { record_id: newRecordId })
+					console.log('Saved new recordId to backend:', newRecordId)
+				} catch (error) {
+					console.error('Error saving recordId to backend:', error.message)
+				}
 			}
 			console.log('Response from detect_and_save endpoint: ', detectData)
 
@@ -529,10 +546,11 @@ export default function App() {
 
 				if (syncRes.data?.message?.includes('zaktualizowany')) {
 					console.log('Rekord zaktualizowany, czyszczenie recordId...')
-					setRecordId(null) // Usuń recordId po zakończeniu synchronizacji
+					await axios.post('http://192.168.0.139:8000/set_record_id', { record_id: null })
 				}
 			} else {
 				console.warn('No data to sync.')
+				await axios.post('http://192.168.0.139:8000/set_record_id', { record_id: null })
 			}
 
 			setResponse(detectData)
