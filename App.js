@@ -1237,11 +1237,17 @@ export default function App() {
 											<>
 												{response.data ? (
 													<>
-														<Text style={styles.responseText}>
-															Numer rejestracyjny: {response.data.license_plate || 'Brak danych'}
-														</Text>
-														<Text style={styles.responseText}>Waga: {response.data.weight || 'Brak danych'}</Text>
-														<Text style={styles.responseText}>Marker ID: {response.data.markers || 'Brak danych'}</Text>
+														{response.data.license_plate && (
+															<Text style={styles.responseText}>
+																Numer rejestracyjny: {response.data.license_plate}
+															</Text>
+														)}
+														{response.data.weight && (
+															<Text style={styles.responseText}>Waga: {response.data.weight}</Text>
+														)}
+														{response.data.markers && response.data.markers.length > 0 && (
+															<Text style={styles.responseText}>Marker ID: {response.data.markers}</Text>
+														)}
 													</>
 												) : (
 													<Text style={styles.responseText}>Brak danych do wyświetlenia</Text>
