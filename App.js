@@ -511,6 +511,11 @@ export default function App() {
 			})
 			const detectData = detectRes.data
 
+			if (detectData.status === 'ignored') {
+				console.log('Zapytanie zignorowane:', detectData.message)
+				return
+			}
+
 			if (!currentRecordId && detectData.data?.record_id) {
 				const newRecordId = detectData.data.record_id
 				try {
