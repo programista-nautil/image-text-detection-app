@@ -447,42 +447,7 @@ export default function App() {
 
 		setLoading(true)
 
-		const formData = new FormData()
-		formData.append('file', {
-			uri: selectedImageUri,
-			type: 'image/jpeg',
-			name: 'photo.jpg',
-		})
-
 		try {
-			// Include detection mode in request
-			const detectObjectsRes = await axios.post(
-				`http://192.168.0.139:8000/detect_objects?mode=${detectionMode}`,
-				formData,
-				{
-					headers: {
-						'Content-Type': 'multipart/form-data',
-					},
-				}
-			)
-
-			setResponse(null)
-
-			if (detectObjectsRes.data.length === 0) {
-				const noObjectsMessage = 'Nie wykryto żadnych obiektów na zdjęciu.'
-				setError(noObjectsMessage)
-				//Speech.speak(noObjectsMessage)
-				setObjectDetection([])
-				setLoading(false)
-				return
-			} else {
-				setObjectDetection(detectObjectsRes.data)
-				setError(null)
-				if (detectionMode === 'microwave') {
-					speakText('Wykryto ekspres, analizuje tekst.')
-				}
-			}
-
 			const base64Image = await getBase64(selectedImageUri)
 
 			let currentRecordId = recordId
