@@ -292,7 +292,7 @@ export default function App() {
 				mode: detectionMode,
 			}
 
-			const detectRes = await axios.post('http://192.168.0.139:8000/detect_and_save_marker', data, {
+			const detectRes = await axios.post('https://debogorze.pl/detect_and_save_marker', data, {
 				headers: {
 					'Content-Type': 'application/json',
 				},
@@ -369,7 +369,7 @@ export default function App() {
 				mode: detectionMode, // Tryb jest zawsze "microwave" tutaj
 			}
 
-			const detectRes = await axios.post('http://192.168.0.139:8000/detect_and_save', data, {
+			const detectRes = await axios.post('https://debogorze.pl/detect_and_save', data, {
 				headers: {
 					'Content-Type': 'application/json',
 				},
@@ -418,7 +418,7 @@ export default function App() {
 				mode: detectionMode, // Send the detection mode to the backend
 			}
 
-			const detectRes = await axios.post('http://192.168.0.139:8000/detect_and_save', data, {
+			const detectRes = await axios.post('https://debogorze.pl/detect_and_save', data, {
 				headers: {
 					'Content-Type': 'application/json',
 				},
@@ -453,7 +453,7 @@ export default function App() {
 			let currentRecordId = recordId
 			if (!currentRecordId) {
 				try {
-					const getRecordIdRes = await axios.get('http://192.168.0.139:8000/get_record_id')
+					const getRecordIdRes = await axios.get('https://debogorze.pl/get_record_id')
 					currentRecordId = getRecordIdRes.data.record_id
 					console.log('Fetched recordId from backend:', currentRecordId)
 				} catch (error) {
@@ -469,7 +469,7 @@ export default function App() {
 				record_id: currentRecordId,
 			}
 
-			const detectRes = await axios.post('http://192.168.0.139:8000/detect_and_save', data, {
+			const detectRes = await axios.post('https://debogorze.pl/detect_and_save', data, {
 				headers: {
 					'Content-Type': 'application/json',
 				},
@@ -484,7 +484,7 @@ export default function App() {
 			if (!currentRecordId && detectData.data?.record_id) {
 				const newRecordId = detectData.data.record_id
 				try {
-					await axios.post('http://192.168.0.139:8000/set_record_id', { record_id: newRecordId })
+					await axios.post('https://debogorze.pl/set_record_id', { record_id: newRecordId })
 					console.log('Saved new recordId to backend:', newRecordId)
 				} catch (error) {
 					console.error('Error saving recordId to backend:', error.message)
@@ -507,7 +507,7 @@ export default function App() {
 				console.log('Preparing to sync data: ', syncData)
 
 				// Wywołanie sync_data
-				const syncRes = await axios.post('http://192.168.0.139:8000/sync_data', syncData, {
+				const syncRes = await axios.post('https://debogorze.pl/sync_data', syncData, {
 					headers: {
 						'Content-Type': 'application/json',
 					},
@@ -517,11 +517,11 @@ export default function App() {
 
 				if (syncRes.data?.message?.includes('zaktualizowany')) {
 					console.log('Rekord zaktualizowany, czyszczenie recordId...')
-					await axios.post('http://192.168.0.139:8000/set_record_id', { record_id: null })
+					await axios.post('https://debogorze.pl/set_record_id', { record_id: null })
 				}
 			} else {
 				console.warn('No data to sync.')
-				await axios.post('http://192.168.0.139:8000/set_record_id', { record_id: null })
+				await axios.post('https://debogorze.pl/set_record_id', { record_id: null })
 			}
 
 			setResponse(detectData)
@@ -607,7 +607,7 @@ export default function App() {
 			// Wyślij dane do API
 
 			console.log('ustawiony mode -' + detectionMode)
-			const detectRes = await axios.post(`http://192.168.0.139:8000/detect_objects?mode=${detectionMode}`, formData, {
+			const detectRes = await axios.post(`https://debogorze.pl/detect_objects?mode=${detectionMode}`, formData, {
 				headers: {
 					'Content-Type': 'multipart/form-data',
 				},
@@ -736,7 +736,7 @@ export default function App() {
 				})
 
 				//https://debogorze.pl
-				const detectRes = await axios.post(`http://192.168.0.139:8000/detect_objects?mode=${detectionMode}`, formData, {
+				const detectRes = await axios.post(`https://debogorze.pl/detect_objects?mode=${detectionMode}`, formData, {
 					headers: {
 						'Content-Type': 'multipart/form-data',
 					},
