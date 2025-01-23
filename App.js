@@ -453,8 +453,13 @@ export default function App() {
 			let currentRecordId = recordId
 			if (!currentRecordId) {
 				try {
-					const getRecordIdRes = await axios.get('https://debogorze.pl/get_record_id')
-					currentRecordId = getRecordIdRes.data.record_id
+					const recordStateRes = await axios.get('http://192.168.0.139:8000/get_record_id')
+					const { record_id, is_processing } = recordStateRes.data
+					if (is_processing) {
+						console.log('System jest aktualnie zajęty. Spróbuj ponownie za chwilę.')
+						return
+					}
+					currentRecordId = record_id
 					console.log('Fetched recordId from backend:', currentRecordId)
 				} catch (error) {
 					console.warn('No recordId found on backend, generating a new one.')
@@ -469,7 +474,7 @@ export default function App() {
 				record_id: currentRecordId,
 			}
 
-			const detectRes = await axios.post('https://debogorze.pl/detect_and_save', data, {
+			const detectRes = await axios.post('http://192.168.0.139:8000/detect_and_save', data, {
 				headers: {
 					'Content-Type': 'application/json',
 				},
@@ -484,7 +489,11 @@ export default function App() {
 			if (!currentRecordId && detectData.data?.record_id) {
 				const newRecordId = detectData.data.record_id
 				try {
-					await axios.post('https://debogorze.pl/set_record_id', { record_id: newRecordId })
+					await axios.post('http://192.168.0.139:8000/set_record_id', {
+						record_id: newRecordId,
+						is_processing: true,
+						last_mode: isWeightDetection,
+					})
 					console.log('Saved new recordId to backend:', newRecordId)
 				} catch (error) {
 					console.error('Error saving recordId to backend:', error.message)
@@ -507,7 +516,7 @@ export default function App() {
 				console.log('Preparing to sync data: ', syncData)
 
 				// Wywołanie sync_data
-				const syncRes = await axios.post('https://debogorze.pl/sync_data', syncData, {
+				const syncRes = await axios.post('http://192.168.0.139:8000/sync_data', syncData, {
 					headers: {
 						'Content-Type': 'application/json',
 					},
@@ -517,11 +526,26 @@ export default function App() {
 
 				if (syncRes.data?.message?.includes('zaktualizowany')) {
 					console.log('Rekord zaktualizowany, czyszczenie recordId...')
-					await axios.post('https://debogorze.pl/set_record_id', { record_id: null })
+					await axios.post('http://192.168.0.139:8000/set_record_id', {
+						record_id: null,
+						is_processing: false,
+						last_mode: isWeightDetection,
+					})
+				} else if (syncRes.data?.message?.includes('dodany')) {
+					console.log('Synchronizacja nie wymagana, dodano nowy rekord')
+					await axios.post('http://192.168.0.139:8000/set_record_id', {
+						record_id: syncRes.data.record_id,
+						is_processing: false,
+						last_mode: isWeightDetection,
+					})
 				}
 			} else {
 				console.warn('No data to sync.')
-				await axios.post('https://debogorze.pl/set_record_id', { record_id: null })
+				await axios.post('http://192.168.0.139:8000/set_record_id', {
+					record_id: null,
+					is_processing: false,
+					last_mode: isWeightDetection,
+				})
 			}
 
 			setResponse(detectData)
