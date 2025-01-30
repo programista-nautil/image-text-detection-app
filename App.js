@@ -156,6 +156,23 @@ export default function App() {
 		}
 	}, [detectionMode, cameraActive, isCameraInitialized])
 
+	useEffect(() => {
+		const resetRecordIdOnStart = async () => {
+			try {
+				await axios.post('http://192.168.0.139:8000/set_record_id', {
+					record_id: null,
+					is_processing: false,
+					last_mode: null,
+				})
+				console.log('Reset record_id.json on app start')
+			} catch (error) {
+				console.error('Error resetting record_id.json:', error.message)
+			}
+		}
+
+		resetRecordIdOnStart()
+	}, [])
+
 	if (!device)
 		return (
 			<View>
