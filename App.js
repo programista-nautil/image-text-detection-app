@@ -163,6 +163,7 @@ export default function App() {
 					record_id: null,
 					is_processing: false,
 					last_mode: null,
+					timestamp_weight_detected: null,
 				})
 				console.log('Reset record_id.json on app start')
 			} catch (error) {
@@ -498,6 +499,11 @@ export default function App() {
 			})
 			const detectData = detectRes.data
 
+			if (detectData.status === 'waiting') {
+				console.log('Czekamy na marker, nie resetujemy recordId.')
+				return
+			}
+
 			if (detectData.status === 'ignored') {
 				console.log('Zapytanie zignorowane:', detectData.message)
 				return
@@ -547,6 +553,7 @@ export default function App() {
 						record_id: null,
 						is_processing: false,
 						last_mode: isWeightDetection,
+						timestamp_weight_detected: null,
 					})
 				} else if (syncRes.data?.message?.includes('dodany')) {
 					console.log('Synchronizacja nie wymagana, dodano nowy rekord')
@@ -558,11 +565,21 @@ export default function App() {
 				}
 			} else {
 				console.warn('No data to sync.')
-				await axios.post('http://192.168.0.139:8000/set_record_id', {
-					record_id: null,
-					is_processing: false,
-					last_mode: isWeightDetection,
-				})
+
+				const recordStateRes = await axios.get('http://192.168.0.139:8000/get_record_id')
+				const { timestamp_weight_detected } = recordStateRes.data
+
+				if (!timestamp_weight_detected) {
+					console.log('Nie wykryto aktywnego timera, resetujemy recordId.')
+					await axios.post('http://192.168.0.139:8000/set_record_id', {
+						record_id: null,
+						is_processing: false,
+						last_mode: isWeightDetection,
+						timestamp_weight_detected: null,
+					})
+				} else {
+					console.log('Timer nadal aktywny, nie resetujemy recordId.')
+				}
 			}
 
 			setResponse(detectData)
