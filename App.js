@@ -470,20 +470,25 @@ export default function App() {
 			const base64Image = await getBase64(selectedImageUri)
 
 			let currentRecordId = recordId
-			if (!currentRecordId) {
-				try {
-					const recordStateRes = await axios.get('http://192.168.0.139:8000/get_record_id')
-					const { record_id, is_processing } = recordStateRes.data
-					if (is_processing) {
-						console.log('System jest aktualnie zajęty. Spróbuj ponownie za chwilę.')
-						return
-					}
+
+			try {
+				const recordStateRes = await axios.get('http://192.168.0.139:8000/get_record_id')
+				const { record_id, is_processing } = recordStateRes.data
+
+				// 🚨 Jeśli system jest zajęty, kończymy funkcję od razu
+				if (is_processing) {
+					console.log('System jest aktualnie zajęty. Spróbuj ponownie za chwilę.')
+					return
+				}
+
+				// Aktualizujemy `currentRecordId` tylko jeśli nie było go wcześniej
+				if (!currentRecordId) {
 					currentRecordId = record_id
 					console.log('Fetched recordId from backend:', currentRecordId)
-				} catch (error) {
-					console.warn('No recordId found on backend, generating a new one.')
-					currentRecordId = null
 				}
+			} catch (error) {
+				console.warn('No recordId found on backend, generating a new one.')
+				currentRecordId = null
 			}
 
 			const data = {
