@@ -570,13 +570,23 @@ export default function App() {
 				const { timestamp_weight_detected } = recordStateRes.data
 
 				if (!timestamp_weight_detected) {
-					console.log('Nie wykryto aktywnego timera, resetujemy recordId.')
-					await axios.post('http://192.168.0.139:8000/set_record_id', {
-						record_id: null,
-						is_processing: false,
-						last_mode: isWeightDetection,
-						timestamp_weight_detected: null,
-					})
+					if (isWeightDetection) {
+						console.log('Nie wykryto aktywnego timera, resetujemy recordId.')
+						await axios.post('http://192.168.0.139:8000/set_record_id', {
+							record_id: null,
+							is_processing: false,
+							last_mode: null,
+							timestamp_weight_detected: null,
+						})
+					} else {
+						console.log('Nie wykryto aktywnego timera, resetujemy recordId.')
+						await axios.post('http://192.168.0.139:8000/set_record_id', {
+							record_id: null,
+							is_processing: false,
+							last_mode: isWeightDetection,
+							timestamp_weight_detected: null,
+						})
+					}
 				} else {
 					console.log('Timer nadal aktywny, nie resetujemy recordId.')
 				}
