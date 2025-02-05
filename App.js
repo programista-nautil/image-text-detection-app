@@ -164,6 +164,7 @@ export default function App() {
 					is_processing: false,
 					last_mode: null,
 					timestamp_weight_detected: null,
+					last_weight: 0,
 				})
 				console.log('Reset record_id.json on app start')
 			} catch (error) {
@@ -516,6 +517,7 @@ export default function App() {
 						record_id: newRecordId,
 						is_processing: true,
 						last_mode: isWeightDetection,
+						last_weight: detectData.data?.weight || 0,
 					})
 					console.log('Saved new recordId to backend:', newRecordId)
 				} catch (error) {
@@ -547,21 +549,42 @@ export default function App() {
 
 				console.log('Response from sync_data endpoint: ', syncRes.data)
 
-				if (syncRes.data?.message?.includes('zaktualizowany')) {
-					console.log('Rekord zaktualizowany, czyszczenie recordId...')
-					await axios.post('http://192.168.0.139:8000/set_record_id', {
-						record_id: null,
-						is_processing: false,
-						last_mode: isWeightDetection,
-						timestamp_weight_detected: null,
-					})
-				} else if (syncRes.data?.message?.includes('dodany')) {
-					console.log('Synchronizacja nie wymagana, dodano nowy rekord')
-					await axios.post('http://192.168.0.139:8000/set_record_id', {
-						record_id: syncRes.data.record_id,
-						is_processing: false,
-						last_mode: isWeightDetection,
-					})
+				if (detectData.status === 'Weight detected') {
+					if (syncRes.data?.message?.includes('zaktualizowany')) {
+						console.log('Rekord zaktualizowany dla wagi')
+						await axios.post('http://192.168.0.139:8000/set_record_id', {
+							record_id: syncRes.data.record_id,
+							is_processing: false,
+							last_mode: isWeightDetection,
+							last_weight: detectData.data?.weight || 0,
+						})
+					} else if (syncRes.data?.message?.includes('dodany')) {
+						console.log('Synchronizacja nie wymagana, dodano nowy rekord')
+						await axios.post('http://192.168.0.139:8000/set_record_id', {
+							record_id: syncRes.data.record_id,
+							is_processing: false,
+							last_weight: detectData.data?.weight || 0,
+						})
+					}
+				} else {
+					if (syncRes.data?.message?.includes('zaktualizowany')) {
+						console.log('Rekord zaktualizowany, czyszczenie recordId...')
+						await axios.post('http://192.168.0.139:8000/set_record_id', {
+							record_id: null,
+							is_processing: false,
+							last_mode: isWeightDetection,
+							timestamp_weight_detected: null,
+							last_weight: 0,
+						})
+					} else if (syncRes.data?.message?.includes('dodany')) {
+						console.log('Synchronizacja nie wymagana, dodano nowy rekord')
+						await axios.post('http://192.168.0.139:8000/set_record_id', {
+							record_id: syncRes.data.record_id,
+							is_processing: false,
+							last_mode: isWeightDetection,
+							last_weight: 0,
+						})
+					}
 				}
 			} else {
 				console.warn('No data to sync.')
@@ -577,6 +600,7 @@ export default function App() {
 							is_processing: false,
 							last_mode: null,
 							timestamp_weight_detected: null,
+							last_weight: detectData.data?.weight || 0,
 						})
 					} else {
 						console.log('Nie wykryto aktywnego timera, resetujemy recordId.')
@@ -585,6 +609,7 @@ export default function App() {
 							is_processing: false,
 							last_mode: isWeightDetection,
 							timestamp_weight_detected: null,
+							last_weight: 0,
 						})
 					}
 				} else {
