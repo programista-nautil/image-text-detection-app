@@ -66,8 +66,8 @@ export default function App() {
 	const [isCameraInitialized, setIsCameraInitialized] = useState(false)
 	const isDetectionRunningRef = useRef(false)
 	const [recordId, setRecordId] = useState(null)
-	//const endpointUrl = 'https://debogorze.pl'
-	const endpointUrl = 'http://192.168.0.139:8000'
+	const endpointUrl = 'https://debogorze.pl'
+	//const endpointUrl = 'http://192.168.0.139:8000'
 
 	const aspectRatio = 4 / 3
 
@@ -177,6 +177,16 @@ export default function App() {
 		resetRecordIdOnStart()
 	}, [])
 
+	useEffect(() => {
+		if (image) {
+			setImage(null)
+		}
+		setCarCameraMode(true)
+		keepScreenAwake()
+		setCarDetectionMode(true)
+		setCameraActive(true)
+	}, [])
+
 	if (!device)
 		return (
 			<View>
@@ -243,7 +253,7 @@ export default function App() {
 			case 'all':
 				return 'Tryb wykrywania wszystkich obiektów w czasie rzeczywistym.'
 			case 'car':
-				return 'Tryb wykrywania pojazdów i odczytywania ich tablicy rejestracyjnej i wagi.'
+				return 'Tryb wykrywania markera na pojeździe i odczytywania jego numeru rejestracyjnego.'
 			case 'microwave':
 				return 'Tryb wykrywania markerów i analizy tekstu.'
 			default:
@@ -998,27 +1008,7 @@ export default function App() {
 						this.scrollView = ref
 					}}
 					onContentSizeChange={() => this.scrollView.scrollToEnd({ animated: true })}>
-					<Text style={styles.modeTitle}>Wybierz tryb:</Text>
-					<View style={styles.modeSelector}>
-						<TouchableOpacity
-							style={[styles.modeButton, !isWeightDetection ? styles.selectedMode : styles.unselectedMode]}
-							onPress={() => {
-								setIsWeightDetection(false)
-							}}
-							disabled={loading}
-							accessibilityRole='button'>
-							<Text style={[styles.modeButtonText, !isWeightDetection && styles.selectedModeText]}>Markery</Text>
-						</TouchableOpacity>
-						<TouchableOpacity
-							style={[styles.modeButton, isWeightDetection ? styles.selectedMode : styles.unselectedMode]}
-							onPress={() => {
-								setIsWeightDetection(true)
-							}}
-							disabled={loading}
-							accessibilityRole='button'>
-							<Text style={[styles.modeButtonText, isWeightDetection && styles.selectedModeText]}>Waga</Text>
-						</TouchableOpacity>
-					</View>
+					<Text style={styles.modeTitle}>Tryb wykrywania markera</Text>
 					<Card style={styles.descriptionCard}>
 						<Card.Content>
 							<Text style={styles.descriptionText}>{getDescriptionText()}</Text>
@@ -1041,23 +1031,6 @@ export default function App() {
 									labelStyle={{ color: 'white' }}>
 									Wybierz z galerii
 								</Button> */}
-								<Button
-									mode='contained'
-									onPress={() => {
-										if (image) {
-											setImage(null)
-										}
-										setCarCameraMode(true)
-										setTakePictureActive(true)
-										setCarDetectionMode(false)
-									}}
-									style={styles.button}
-									icon='camera'
-									disabled={loading || cameraActive || takePictureActive}
-									accessibilityRole='button'
-									labelStyle={{ color: 'white' }}>
-									Otwórz aparat
-								</Button>
 								<Button
 									mode='contained'
 									onPress={() => {
@@ -1132,23 +1105,16 @@ export default function App() {
 					{cameraActive ? (
 						<>
 							<View>
-								{detectionMode === 'all' && (
-									<VisonCamera
-										style={[styles.camera, { position: 'relative' }]}
-										ref={cameraRef}
-										device={device}
-										isActive={true}
-										frameProcessor={frameProcessor}
-										frameProcessorFps={5} // Ustawienie maksymalnego FPS dla przetwarzania klatek
-										photo={false}></VisonCamera>
-								)}
 								{detectionMode === 'car' && (
 									<CameraView
 										key={`camera-${cameraActive}-${isCameraInitialized}`} // Dynamiczny klucz
 										cameraRef={cameraRef}
 										device={device}
 										isActive={true}
-										onInitialized={() => setIsCameraInitialized(true)}
+										onInitialized={() => {
+											setIsCameraInitialized(true)
+											console.log('Camera initialized')
+										}}
 									/>
 								)}
 
@@ -1567,7 +1533,7 @@ const styles = StyleSheet.create({
 		fontWeight: 'bold',
 		color: '#333',
 		marginBottom: 10,
-		textAlign: 'left',
+		textAlign: 'center',
 		paddingLeft: 5,
 	},
 	responseRow: {
