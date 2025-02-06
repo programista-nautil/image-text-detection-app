@@ -66,6 +66,8 @@ export default function App() {
 	const [isCameraInitialized, setIsCameraInitialized] = useState(false)
 	const isDetectionRunningRef = useRef(false)
 	const [recordId, setRecordId] = useState(null)
+	//const endpointUrl = 'https://debogorze.pl'
+	const endpointUrl = 'http://192.168.0.139:8000'
 
 	const aspectRatio = 4 / 3
 
@@ -159,7 +161,7 @@ export default function App() {
 	useEffect(() => {
 		const resetRecordIdOnStart = async () => {
 			try {
-				await axios.post('http://192.168.0.139:8000/set_record_id', {
+				await axios.post(new URL('/set_record_id', endpointUrl).href, {
 					record_id: null,
 					is_processing: false,
 					last_mode: null,
@@ -311,7 +313,7 @@ export default function App() {
 				mode: detectionMode,
 			}
 
-			const detectRes = await axios.post('https://debogorze.pl/detect_and_save_marker', data, {
+			const detectRes = await axios.post(new URL('/detect_and_save_marker', endpointUrl).href, data, {
 				headers: {
 					'Content-Type': 'application/json',
 				},
@@ -388,7 +390,7 @@ export default function App() {
 				mode: detectionMode, // Tryb jest zawsze "microwave" tutaj
 			}
 
-			const detectRes = await axios.post('https://debogorze.pl/detect_and_save', data, {
+			const detectRes = await axios.post(new URL('/detect_and_save', endpointUrl).href, data, {
 				headers: {
 					'Content-Type': 'application/json',
 				},
@@ -437,7 +439,7 @@ export default function App() {
 				mode: detectionMode, // Send the detection mode to the backend
 			}
 
-			const detectRes = await axios.post('https://debogorze.pl/detect_and_save', data, {
+			const detectRes = await axios.post(new URL('/detect_and_save', endpointUrl).href, data, {
 				headers: {
 					'Content-Type': 'application/json',
 				},
@@ -472,7 +474,7 @@ export default function App() {
 			let currentRecordId = recordId
 
 			try {
-				const recordStateRes = await axios.get('http://192.168.0.139:8000/get_record_id')
+				const recordStateRes = await axios.get(new URL('/get_record_id', endpointUrl).href)
 				const { record_id, is_processing } = recordStateRes.data
 
 				// 🚨 Jeśli system jest zajęty, kończymy funkcję od razu
@@ -498,7 +500,7 @@ export default function App() {
 				record_id: currentRecordId,
 			}
 
-			const detectRes = await axios.post('http://192.168.0.139:8000/detect_and_save', data, {
+			const detectRes = await axios.post(new URL('/detect_and_save', endpointUrl).href, data, {
 				headers: {
 					'Content-Type': 'application/json',
 				},
@@ -518,7 +520,7 @@ export default function App() {
 			if (!currentRecordId && detectData.data?.record_id) {
 				const newRecordId = detectData.data.record_id
 				try {
-					await axios.post('http://192.168.0.139:8000/set_record_id', {
+					await axios.post(new URL('/set_record_id', endpointUrl).href, {
 						record_id: newRecordId,
 						is_processing: true,
 						last_mode: isWeightDetection,
@@ -546,7 +548,7 @@ export default function App() {
 				console.log('Preparing to sync data: ', syncData)
 
 				// Wywołanie sync_data
-				const syncRes = await axios.post('http://192.168.0.139:8000/sync_data', syncData, {
+				const syncRes = await axios.post(new URL('/sync_data', endpointUrl).href, syncData, {
 					headers: {
 						'Content-Type': 'application/json',
 					},
@@ -557,7 +559,7 @@ export default function App() {
 				if (detectData.status === 'Weight detected') {
 					if (syncRes.data?.message?.includes('zaktualizowany')) {
 						console.log('Rekord zaktualizowany dla wagi')
-						await axios.post('http://192.168.0.139:8000/set_record_id', {
+						await axios.post(new URL('/set_record_id', endpointUrl).href, {
 							record_id: syncRes.data.record_id,
 							is_processing: false,
 							last_mode: isWeightDetection,
@@ -565,7 +567,7 @@ export default function App() {
 						})
 					} else if (syncRes.data?.message?.includes('dodany')) {
 						console.log('Synchronizacja nie wymagana, dodano nowy rekord')
-						await axios.post('http://192.168.0.139:8000/set_record_id', {
+						await axios.post(new URL('/set_record_id', endpointUrl).href, {
 							record_id: syncRes.data.record_id,
 							is_processing: false,
 							last_weight: detectData.data?.weight || 0,
@@ -574,7 +576,7 @@ export default function App() {
 				} else {
 					if (syncRes.data?.message?.includes('zaktualizowany')) {
 						console.log('Rekord zaktualizowany, czyszczenie recordId...')
-						await axios.post('http://192.168.0.139:8000/set_record_id', {
+						await axios.post(new URL('/set_record_id', endpointUrl).href, {
 							record_id: null,
 							is_processing: false,
 							last_mode: isWeightDetection,
@@ -583,7 +585,7 @@ export default function App() {
 						})
 					} else if (syncRes.data?.message?.includes('dodany')) {
 						console.log('Synchronizacja nie wymagana, dodano nowy rekord')
-						await axios.post('http://192.168.0.139:8000/set_record_id', {
+						await axios.post(new URL('/set_record_id', endpointUrl).href, {
 							record_id: syncRes.data.record_id,
 							is_processing: false,
 							last_mode: isWeightDetection,
@@ -594,13 +596,13 @@ export default function App() {
 			} else {
 				console.warn('No data to sync.')
 
-				const recordStateRes = await axios.get('http://192.168.0.139:8000/get_record_id')
+				const recordStateRes = await axios.get(new URL('/get_record_id', endpointUrl).href)
 				const { timestamp_weight_detected } = recordStateRes.data
 
 				if (!timestamp_weight_detected) {
 					if (isWeightDetection) {
 						console.log('Nie wykryto aktywnego timera, resetujemy recordId.')
-						await axios.post('http://192.168.0.139:8000/set_record_id', {
+						await axios.post(new URL('/set_record_id', endpointUrl).href, {
 							record_id: null,
 							is_processing: false,
 							last_mode: null,
@@ -609,7 +611,7 @@ export default function App() {
 						})
 					} else {
 						console.log('Nie wykryto aktywnego timera, resetujemy recordId.')
-						await axios.post('http://192.168.0.139:8000/set_record_id', {
+						await axios.post(new URL('/set_record_id', endpointUrl).href, {
 							record_id: null,
 							is_processing: false,
 							last_mode: isWeightDetection,
@@ -705,7 +707,7 @@ export default function App() {
 			// Wyślij dane do API
 
 			console.log('ustawiony mode -' + detectionMode)
-			const detectRes = await axios.post(`https://debogorze.pl/detect_objects?mode=${detectionMode}`, formData, {
+			const detectRes = await axios.post(new URL(`/detect_objects?mode=${detectionMode}`, endpointUrl).href, formData, {
 				headers: {
 					'Content-Type': 'multipart/form-data',
 				},
@@ -834,11 +836,15 @@ export default function App() {
 				})
 
 				//https://debogorze.pl
-				const detectRes = await axios.post(`https://debogorze.pl/detect_objects?mode=${detectionMode}`, formData, {
-					headers: {
-						'Content-Type': 'multipart/form-data',
-					},
-				})
+				const detectRes = await axios.post(
+					new URL(`/detect_objects?mode=${detectionMode}`, endpointUrl).href,
+					formData,
+					{
+						headers: {
+							'Content-Type': 'multipart/form-data',
+						},
+					}
+				)
 
 				let detectionData = detectRes.data
 				if (typeof detectionData === 'string') {
