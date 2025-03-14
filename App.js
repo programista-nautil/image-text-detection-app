@@ -644,30 +644,37 @@ export default function App() {
 		isDetectionRunningRef.current = true
 		setIsDetectionRunning(true)
 		console.log('Starting car detection loop')
-		while (isDetectionRunningRef.current) {
+
+		const detectionInterval = async () => {
 			try {
+				console.log('zaczynam znowu')
 				if (!cameraRef.current || !cameraActive) {
 					console.log('Camera reference is null or camera is not active, stopping detection loop')
-					break
+					return
 				}
-				if (cameraRef.current) {
-					const photo = await cameraRef.current.takePhoto({
-						flash: 'off',
-					})
 
-					const selectedImage = `file://${photo.path}`
-					setImage(selectedImage)
+				const photo = await cameraRef.current.takePhoto({
+					flash: 'off',
+				})
 
-					await uploadImage(selectedImage)
-				}
+				const selectedImage = `file://${photo.path}`
+				setImage(selectedImage)
+
+				await uploadImage(selectedImage)
+
+				// Po zakończeniu procesu czekaj 60 sekund przed kolejnym wykryciem
+				console.log('koniec')
+				setTimeout(detectionInterval, 60000)
 			} catch (error) {
 				if (error.message.includes('Camera is closed')) {
 					console.log('Camera was closed during detection loop, stopping gracefully')
-					break // Wyjdź z pętli, jeśli kamera jest zamknięta
+					return // Wyjdź z pętli, jeśli kamera jest zamknięta
 				}
 				console.error('Error in detection loop: ', error)
 			}
 		}
+
+		detectionInterval()
 	}
 
 	const stopCarDetectionLoop = () => {
