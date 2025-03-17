@@ -463,7 +463,7 @@ export default function App() {
 			const errorMessage = 'Brak obrazu do przesłania.'
 			setError(errorMessage)
 			speakText(errorMessage)
-			return
+			return { isWeightDetection: false }
 		}
 
 		setLoading(true)
@@ -480,7 +480,7 @@ export default function App() {
 				// 🚨 Jeśli system jest zajęty, kończymy funkcję od razu
 				if (is_processing) {
 					console.log('System jest aktualnie zajęty. Spróbuj ponownie za chwilę.')
-					return
+					return { isWeightDetection: false }
 				}
 
 				// Aktualizujemy `currentRecordId` tylko jeśli nie było go wcześniej
@@ -509,12 +509,12 @@ export default function App() {
 
 			if (detectData.status === 'waiting') {
 				console.log('Czekamy na marker, nie resetujemy recordId.')
-				return
+				return { isWeightDetection: isWeightDetection }
 			}
 
 			if (detectData.status === 'ignored') {
 				console.log('Zapytanie zignorowane:', detectData.message)
-				return
+				return { isWeightDetection: isWeightDetection }
 			}
 
 			if (!currentRecordId && detectData.data?.record_id) {
@@ -625,6 +625,7 @@ export default function App() {
 			}
 
 			setResponse(detectData)
+			return { isWeightDetection: isWeightDetection }
 		} catch (error) {
 			console.error('Error danalyzeImage: ', error.message, error.response ? error.response.data : null)
 			setError('Error during marker detection')
@@ -645,6 +646,8 @@ export default function App() {
 		setIsDetectionRunning(true)
 		console.log('Starting car detection loop')
 
+		let lastWeightDetectionTime = 0
+
 		const detectionInterval = async () => {
 			try {
 				console.log('zaczynam znowu')
@@ -660,11 +663,24 @@ export default function App() {
 				const selectedImage = `file://${photo.path}`
 				setImage(selectedImage)
 
-				await uploadImage(selectedImage)
+				const { isWeightDetection } = (await uploadImage(selectedImage)) || { isWeightDetection: false }
 
-				// Po zakończeniu procesu czekaj 60 sekund przed kolejnym wykryciem
-				console.log('koniec')
-				setTimeout(detectionInterval, 60000)
+				if (isWeightDetection) {
+					lastWeightDetectionTime = Date.now() // Zapisujemy czas wykrycia wagi
+				}
+
+				// Jeśli była wykrywana waga, czekamy 60 sekund przed kolejnym zapytaniem
+				if (isWeightDetection && Date.now() - lastWeightDetectionTime < 60000) {
+					console.log('Wykryto wagę, czekamy 60 sekund przed kolejnym zapytaniem')
+					// Zwracamy, by zapytanie o wagę było opóźnione
+					return setTimeout(detectionInterval, 60000) // Opóźniamy zapytanie o 60 sekund
+				}
+
+				// Jeśli wykryto marker, przechodzimy do kolejnej iteracji natychmiast
+				console.log('Marker wykryty lub czekanie na wagę skończone')
+
+				// Zapytanie o marker jest realizowane natychmiast
+				setTimeout(detectionInterval, 0)
 			} catch (error) {
 				if (error.message.includes('Camera is closed')) {
 					console.log('Camera was closed during detection loop, stopping gracefully')
