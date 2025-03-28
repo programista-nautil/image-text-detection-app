@@ -458,12 +458,12 @@ export default function App() {
 	}
 
 	//Obecna funkcja do obslugiwania całego procesu wykrywania zdjęć
-	const uploadImage = async (selectedImageUri = image) => {
+	const uploadImage = async (selectedImageUri = image, forceRecordCreation = false) => {
 		if (!selectedImageUri) {
 			const errorMessage = 'Brak obrazu do przesłania.'
 			setError(errorMessage)
 			speakText(errorMessage)
-			return { isWeightDetection: false }
+			return { isWeightDetection: false, marker_id: null, detection_error: true }
 		}
 
 		setLoading(true)
@@ -480,7 +480,7 @@ export default function App() {
 				// 🚨 Jeśli system jest zajęty, kończymy funkcję od razu
 				if (is_processing) {
 					console.log('System jest aktualnie zajęty. Spróbuj ponownie za chwilę.')
-					return { isWeightDetection: false }
+					return { isWeightDetection: false, marker_id: null, detection_error: true }
 				}
 
 				// Aktualizujemy `currentRecordId` tylko jeśli nie było go wcześniej
@@ -498,6 +498,7 @@ export default function App() {
 				mode: detectionMode,
 				isWeightDetection: isWeightDetection,
 				record_id: currentRecordId,
+				forceRecordCreation: forceRecordCreation,
 			}
 
 			const detectRes = await axios.post(new URL('/detect_and_save', endpointUrl).href, data, {
@@ -509,12 +510,12 @@ export default function App() {
 
 			if (detectData.status === 'waiting') {
 				console.log('Czekamy na marker, nie resetujemy recordId.')
-				return { isWeightDetection: isWeightDetection }
+				return { isWeightDetection: isWeightDetection, marker_id: null, detection_error: true }
 			}
 
 			if (detectData.status === 'ignored') {
 				console.log('Zapytanie zignorowane:', detectData.message)
-				return { isWeightDetection: isWeightDetection }
+				return { isWeightDetection: isWeightDetection, marker_id: null, detection_error: true }
 			}
 
 			if (!currentRecordId && detectData.data?.record_id) {
@@ -623,9 +624,9 @@ export default function App() {
 					console.log('Timer nadal aktywny, nie resetujemy recordId.')
 				}
 			}
-
+			const marker_id = detectData.data?.markers?.[0]?.id || null
 			setResponse(detectData)
-			return { isWeightDetection: isWeightDetection }
+			return { isWeightDetection: isWeightDetection, marker_id, detection_error: false }
 		} catch (error) {
 			console.error('Error danalyzeImage: ', error.message, error.response ? error.response.data : null)
 			setError('Error during marker detection')
@@ -647,6 +648,7 @@ export default function App() {
 		console.log('Starting car detection loop')
 
 		let lastWeightDetectionTime = 0
+		let markerDetectionAttempts = 0
 
 		const detectionInterval = async () => {
 			try {
@@ -663,7 +665,9 @@ export default function App() {
 				const selectedImage = `file://${photo.path}`
 				setImage(selectedImage)
 
-				const { isWeightDetection } = (await uploadImage(selectedImage)) || { isWeightDetection: false }
+				const { isWeightDetection, marker_id, detection_error } = (await uploadImage(selectedImage)) || {
+					isWeightDetection: false,
+				}
 
 				if (isWeightDetection) {
 					lastWeightDetectionTime = Date.now() // Zapisujemy czas wykrycia wagi
@@ -677,10 +681,31 @@ export default function App() {
 				}
 
 				// Jeśli wykryto marker, przechodzimy do kolejnej iteracji natychmiast
-				console.log('Marker wykryty lub czekanie na wagę skończone')
+				console.log('Wykrywanie markera lub czekanie na wagę skończone')
 
-				// Zapytanie o marker jest realizowane natychmiast
-				setTimeout(detectionInterval, 0)
+				if (!detection_error) {
+					if (marker_id) {
+						console.log('Marker wykryty, resetujemy próby wykrycia markera')
+						markerDetectionAttempts = 0 // Resetowanie prób
+						setTimeout(detectionInterval, 30000) // Zapytanie o marker jest realizowane co 30 sekund
+					} else {
+						// Jeśli marker_id nie istnieje, sprawdzamy liczbę prób
+						if (markerDetectionAttempts < 5) {
+							markerDetectionAttempts++
+							console.log(`Próba wykrycia markera ${markerDetectionAttempts}/5`)
+
+							// Zapytanie o marker jest realizowane co 30 sekund
+							setTimeout(detectionInterval, 30000) // Opóźniamy zapytanie o 30 sekund
+						} else {
+							// Jeśli po 5 próbach nie znaleziono markera, zapisujemy zdjęcie bez markera i resetujemy record_id
+							console.log('Nie wykryto markera po 5 próbach, zapisujemy zdjęcie bez markera.')
+							await uploadImage(selectedImage, true) // Zapisywanie zdjęcia bez markera
+							markerDetectionAttempts = 0 // Resetowanie licznika prób
+							setTimeout(detectionInterval, 30000) // Opóźnienie przed następną iteracją
+						}
+					}
+				}
+				setTimeout(detectionInterval, 30000)
 			} catch (error) {
 				if (error.message.includes('Camera is closed')) {
 					console.log('Camera was closed during detection loop, stopping gracefully')
