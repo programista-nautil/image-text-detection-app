@@ -178,13 +178,18 @@ export default function App() {
 	}, [])
 
 	useEffect(() => {
-		if (image) {
-			setImage(null)
-		}
-		setCarCameraMode(true)
-		keepScreenAwake()
-		setCarDetectionMode(true)
-		setCameraActive(true)
+		const timer = setTimeout(() => {
+			if (image) {
+				setImage(null)
+			}
+			setCarCameraMode(true)
+			keepScreenAwake()
+			setCarDetectionMode(true)
+			setCameraActive(true)
+		}, 15000) // 5000 ms = 5 sekund
+
+		// Cleanup timer when component unmounts or before next effect
+		return () => clearTimeout(timer)
 	}, [])
 
 	if (!device)
