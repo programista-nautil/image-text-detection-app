@@ -153,7 +153,7 @@ export default function App() {
 	}, [response, detectionMode])
 
 	useEffect(() => {
-		if (detectionMode === 'car' && cameraActive && isCameraInitialized) {
+		if (detectionMode === 'car' && isCameraInitialized) {
 			startCarDetectionLoop() // Rozpocznij robienie zdjęć w trybie car
 		}
 	}, [detectionMode, cameraActive, isCameraInitialized])
