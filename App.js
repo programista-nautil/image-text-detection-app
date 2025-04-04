@@ -153,7 +153,7 @@ export default function App() {
 	}, [response, detectionMode])
 
 	useEffect(() => {
-		if (detectionMode === 'car' && isCameraInitialized) {
+		if (detectionMode === 'car' && cameraActive && isCameraInitialized) {
 			startCarDetectionLoop() // Rozpocznij robienie zdjęć w trybie car
 		}
 	}, [detectionMode, cameraActive, isCameraInitialized])
@@ -652,7 +652,17 @@ export default function App() {
 		}
 	}
 
+	const waitForCameraReady = async () => {
+		let tries = 0
+		while (!cameraRef.current || !isCameraInitialized || !cameraActive || !device) {
+			if (tries > 50) throw new Error('Camera not ready after 5 seconds')
+			await new Promise(res => setTimeout(res, 100))
+			tries++
+		}
+	}
+
 	const startCarDetectionLoop = async () => {
+		await waitForCameraReady()
 		if (!cameraRef.current || !isCameraInitialized || !cameraActive || isDetectionRunning) {
 			console.log('Camera not initialized, active, or detection already running')
 			return
@@ -667,9 +677,15 @@ export default function App() {
 
 		const detectionInterval = async () => {
 			try {
+				await waitForCameraReady()
 				console.log('zaczynam znowu')
 				if (!cameraRef.current || !cameraActive) {
 					console.log('Camera reference is null or camera is not active, stopping detection loop')
+					return
+				}
+
+				if (!cameraRef.current) {
+					console.warn('cameraRef is still null despite wait – skipping this frame')
 					return
 				}
 
@@ -720,7 +736,7 @@ export default function App() {
 						}
 					}
 				}
-				setTimeout(detectionInterval, 30000)
+				//setTimeout(detectionInterval, 30000)
 			} catch (error) {
 				if (error.message.includes('Camera is closed')) {
 					console.log('Camera was closed during detection loop, stopping gracefully')
@@ -1160,7 +1176,6 @@ export default function App() {
 							<View>
 								{detectionMode === 'car' && (
 									<CameraView
-										key={`camera-${cameraActive}-${isCameraInitialized}`} // Dynamiczny klucz
 										cameraRef={cameraRef}
 										device={device}
 										isActive={true}
