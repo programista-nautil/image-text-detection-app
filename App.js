@@ -153,7 +153,7 @@ export default function App() {
 	}, [response, detectionMode])
 
 	useEffect(() => {
-		if (detectionMode === 'car' && cameraActive && isCameraInitialized) {
+		if (detectionMode === 'car' && isCameraInitialized) {
 			startCarDetectionLoop() // Rozpocznij robienie zdjęć w trybie car
 		}
 	}, [detectionMode, cameraActive, isCameraInitialized])
@@ -1160,7 +1160,6 @@ export default function App() {
 							<View>
 								{detectionMode === 'car' && (
 									<CameraView
-										key={`camera-${cameraActive}-${isCameraInitialized}`} // Dynamiczny klucz
 										cameraRef={cameraRef}
 										device={device}
 										isActive={true}
