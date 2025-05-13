@@ -497,7 +497,7 @@ export default function App() {
 				image: base64Image,
 				mode: detectionMode,
 				isWeightDetection: isWeightDetection,
-				record_id: currentRecordId,
+				record_id: isWeightDetection ? currentRecordId : null,
 				forceRecordCreation: forceRecordCreation,
 			}
 
@@ -518,19 +518,16 @@ export default function App() {
 				return { isWeightDetection: isWeightDetection, marker_id: null, detection_error: true }
 			}
 
-			if (!currentRecordId && detectData.data?.record_id) {
+			if (isWeightDetection && !currentRecordId && detectData.data?.record_id) {
 				const newRecordId = detectData.data.record_id
-				try {
-					await axios.post(new URL('/set_record_id', endpointUrl).href, {
-						record_id: newRecordId,
-						is_processing: true,
-						last_mode: isWeightDetection,
-						last_weight: detectData.data?.weight || 0,
-					})
-					console.log('Saved new recordId to backend:', newRecordId)
-				} catch (error) {
-					console.error('Error saving recordId to backend:', error.message)
-				}
+				// Zapisz tylko dla wag
+				await axios.post(new URL('/set_record_id', endpointUrl).href, {
+					record_id: newRecordId,
+					is_processing: true,
+					last_mode: isWeightDetection,
+					last_weight: detectData.data?.weight || 0,
+				})
+				console.log('Saved new weight recordId to backend:', newRecordId)
 			}
 			console.log('Response from detect_and_save endpoint: ', detectData)
 
@@ -542,8 +539,7 @@ export default function App() {
 					weight: detectData.data?.weight || '',
 					weight_image_link: detectData.data?.weight_image_link || '',
 					marker_id: detectData.data?.markers?.[0] || '',
-					record_id: recordId || detectData.data.record_id,
-					is_new_record: detectData.data?.is_new_record || false,
+					record_id: detectData.data.record_id,
 				}
 
 				console.log('Preparing to sync data: ', syncData)
@@ -637,6 +633,9 @@ export default function App() {
 		}
 	}
 
+	let weightTimeoutRef = null
+	let markerTimeoutRef = null
+
 	const startCarDetectionLoop = async () => {
 		if (!cameraRef.current || !isCameraInitialized || !cameraActive || isDetectionRunning) {
 			console.log('Camera not initialized, active, or detection already running')
@@ -658,10 +657,7 @@ export default function App() {
 					return
 				}
 
-				const photo = await cameraRef.current.takePhoto({
-					flash: 'off',
-				})
-
+				const photo = await cameraRef.current.takePhoto({ flash: 'off' })
 				const selectedImage = `file://${photo.path}`
 				setImage(selectedImage)
 
@@ -670,51 +666,41 @@ export default function App() {
 				}
 
 				if (isWeightDetection) {
-					lastWeightDetectionTime = Date.now() // Zapisujemy czas wykrycia wagi
+					lastWeightDetectionTime = Date.now()
 				}
 
-				// Jeśli była wykrywana waga, czekamy 60 sekund przed kolejnym zapytaniem
-				if (isWeightDetection && Date.now() - lastWeightDetectionTime < 60000) {
-					console.log('Wykryto wagę, czekamy 60 sekund przed kolejnym zapytaniem')
-					// Zwracamy, by zapytanie o wagę było opóźnione
-					return setTimeout(detectionInterval, 60000) // Opóźniamy zapytanie o 60 sekund
+				// 🕒 Timeout dla wagi
+				if (isWeightDetection && Date.now() - lastWeightDetectionTime < 30000) {
+					console.log('Wykryto wagę, czekamy 30 sekund przed kolejnym zapytaniem')
+					if (weightTimeoutRef) clearTimeout(weightTimeoutRef)
+					weightTimeoutRef = setTimeout(detectionInterval, 30000)
+					return
 				}
 
-				// Jeśli wykryto marker, przechodzimy do kolejnej iteracji natychmiast
-				console.log('Wykrywanie markera lub czekanie na wagę skończone')
-
-				if (!detection_error) {
-					if (marker_id) {
-						console.log('Marker wykryty, resetujemy próby wykrycia markera')
-						markerDetectionAttempts = 0 // Resetowanie prób
-						setTimeout(detectionInterval, 30000) // Zapytanie o marker jest realizowane co 30 sekund
-					} else {
-						// Jeśli marker_id nie istnieje, sprawdzamy liczbę prób
-						if (markerDetectionAttempts < 5) {
-							markerDetectionAttempts++
-							console.log(`Próba wykrycia markera ${markerDetectionAttempts}/5`)
-
-							// Zapytanie o marker jest realizowane co 30 sekund
-							setTimeout(detectionInterval, 30000) // Opóźniamy zapytanie o 30 sekund
-						} else {
-							// Jeśli po 5 próbach nie znaleziono markera, zapisujemy zdjęcie bez markera i resetujemy record_id
-							console.log('Nie wykryto markera po 5 próbach, zapisujemy zdjęcie bez markera.')
-							await uploadImage(selectedImage, true) // Zapisywanie zdjęcia bez markera
-							markerDetectionAttempts = 0 // Resetowanie licznika prób
-							setTimeout(detectionInterval, 30000) // Opóźnienie przed następną iteracją
-						}
-					}
+				// 🕒 Marker wykryty – osobny timeout
+				if (!detection_error && marker_id) {
+					console.log('Marker wykryty, resetujemy próby wykrycia markera')
+					markerDetectionAttempts = 0
+					if (markerTimeoutRef) clearTimeout(markerTimeoutRef)
+					markerTimeoutRef = setTimeout(detectionInterval, 30000)
+					return
 				}
-				setTimeout(detectionInterval, 30000)
+
+				// ⏱️ Domyślny timeout, jeśli nic nie zostało zwrócone wyżej
+				if (markerTimeoutRef) clearTimeout(markerTimeoutRef)
+				markerTimeoutRef = setTimeout(detectionInterval, 30000)
 			} catch (error) {
 				if (error.message.includes('Camera is closed')) {
 					console.log('Camera was closed during detection loop, stopping gracefully')
-					return // Wyjdź z pętli, jeśli kamera jest zamknięta
+					return
 				}
 				console.error('Error in detection loop: ', error)
 			}
 		}
 
+		// 🔁 Start pierwszej iteracji
+		if (weightTimeoutRef) clearTimeout(weightTimeoutRef)
+		if (markerTimeoutRef) clearTimeout(markerTimeoutRef)
 		detectionInterval()
 	}
 
