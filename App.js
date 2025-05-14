@@ -20,13 +20,7 @@ import { Provider as PaperProvider, Button, Card, ActivityIndicator } from 'reac
 import Header from './components/Header'
 import { MaterialIcons } from '@expo/vector-icons'
 import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake'
-import {
-	Camera as VisonCamera,
-	useCameraDevice,
-	useCameraPermission,
-	useFrameProcessor,
-	runAtTargetFps,
-} from 'react-native-vision-camera'
+import { useCameraDevice, useCameraPermission, useFrameProcessor, runAtTargetFps } from 'react-native-vision-camera'
 import { useSharedValue, runOnJS } from 'react-native-reanimated'
 import { crop } from 'vision-camera-cropper'
 import { useRunOnJS } from 'react-native-worklets-core'
@@ -183,6 +177,23 @@ export default function App() {
 				<Text>No camera device found</Text>
 			</View>
 		)
+
+	useEffect(() => {
+		if (!device) return
+
+		const timer = setTimeout(() => {
+			if (image) {
+				setImage(null)
+			}
+			setCarCameraMode(true)
+			keepScreenAwake()
+			setCarDetectionMode(true)
+			setCameraActive(true)
+		}, 15000) // 5000 ms = 5 sekund
+
+		// Cleanup timer when component unmounts or before next effect
+		return () => clearTimeout(timer)
+	}, [device])
 
 	const handleModeChange = newMode => {
 		// Usunięcie zdjęcia i danych po zmianie trybu
@@ -1135,13 +1146,12 @@ export default function App() {
 					{takePictureActive && (
 						<>
 							<View>
-								<VisonCamera
-									style={[styles.camera, { position: 'relative' }]}
-									ref={cameraRef}
+								<CameraView
+									cameraRef={cameraRef}
 									device={device}
 									isActive={true}
-									photo={true} // umożliwia robienie zdjęć
-									onInitialized={() => console.log('Camera initialized')}></VisonCamera>
+									onInitialized={() => setIsCameraInitialized(true)}
+								/>
 								<TouchableOpacity
 									style={styles.closeButton}
 									onPress={stopDetection}
@@ -1166,19 +1176,8 @@ export default function App() {
 					{cameraActive ? (
 						<>
 							<View>
-								{detectionMode === 'all' && (
-									<VisonCamera
-										style={[styles.camera, { position: 'relative' }]}
-										ref={cameraRef}
-										device={device}
-										isActive={true}
-										frameProcessor={frameProcessor}
-										frameProcessorFps={5} // Ustawienie maksymalnego FPS dla przetwarzania klatek
-										photo={false}></VisonCamera>
-								)}
-								{detectionMode === 'car' && (
+								{cameraActive && device && detectionMode === 'car' && (
 									<CameraView
-										key={`camera-${cameraActive}-${isCameraInitialized}`} // Dynamiczny klucz
 										cameraRef={cameraRef}
 										device={device}
 										isActive={true}

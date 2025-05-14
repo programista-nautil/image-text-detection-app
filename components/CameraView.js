@@ -21,6 +21,9 @@ const CameraView = memo(({ cameraRef, device, isActive, onInitialized }) => {
 			isActive={isActive}
 			photo={true}
 			onInitialized={onInitialized}
+			onError={e => {
+				console.error('Camera init error', e)
+			}}
 		/>
 	)
 })
