@@ -87,6 +87,16 @@ export default function App() {
 	}
 
 	useEffect(() => {
+		if (detectionMode === 'car' && cameraActive && isCameraInitialized && isCameraReadyForUse) {
+			console.log('Startuję detekcję, kamera w pełni gotowa')
+			const timeout = setTimeout(() => {
+				startCarDetectionLoop()
+			}, 1200) // pozwól refowi się przypisać
+			return () => clearTimeout(timeout)
+		}
+	}, [detectionMode, cameraActive, isCameraInitialized, isCameraReadyForUse])
+
+	useEffect(() => {
 		if (detectionMode === 'car' && cameraActive) {
 			takePicture() // Rozpocznij robienie zdjęć w trybie car
 		}
@@ -249,7 +259,7 @@ export default function App() {
 			case 'all':
 				return 'Tryb wykrywania wszystkich obiektów w czasie rzeczywistym.'
 			case 'car':
-				return 'Tryb wykrywania pojazdów i odczytywania ich tablicy rejestracyjnej i wagi.'
+				return 'Tryb wykrywania markera na pojeździe i odczytywania jego numeru rejestracyjnego.'
 			case 'microwave':
 				return 'Tryb wykrywania markerów i analizy tekstu.'
 			default:
@@ -1044,27 +1054,7 @@ export default function App() {
 						this.scrollView = ref
 					}}
 					onContentSizeChange={() => this.scrollView.scrollToEnd({ animated: true })}>
-					<Text style={styles.modeTitle}>Wybierz tryb:</Text>
-					<View style={styles.modeSelector}>
-						<TouchableOpacity
-							style={[styles.modeButton, !isWeightDetection ? styles.selectedMode : styles.unselectedMode]}
-							onPress={() => {
-								setIsWeightDetection(false)
-							}}
-							disabled={loading}
-							accessibilityRole='button'>
-							<Text style={[styles.modeButtonText, !isWeightDetection && styles.selectedModeText]}>Markery</Text>
-						</TouchableOpacity>
-						<TouchableOpacity
-							style={[styles.modeButton, isWeightDetection ? styles.selectedMode : styles.unselectedMode]}
-							onPress={() => {
-								setIsWeightDetection(true)
-							}}
-							disabled={loading}
-							accessibilityRole='button'>
-							<Text style={[styles.modeButtonText, isWeightDetection && styles.selectedModeText]}>Waga</Text>
-						</TouchableOpacity>
-					</View>
+					<Text style={styles.modeTitle}>Tryb wykrywania markera</Text>
 					<Card style={styles.descriptionCard}>
 						<Card.Content>
 							<Text style={styles.descriptionText}>{getDescriptionText()}</Text>
@@ -1087,23 +1077,7 @@ export default function App() {
 									labelStyle={{ color: 'white' }}>
 									Wybierz z galerii
 								</Button> */}
-								<Button
-									mode='contained'
-									onPress={() => {
-										if (image) {
-											setImage(null)
-										}
-										setCarCameraMode(true)
-										setTakePictureActive(true)
-										setCarDetectionMode(false)
-									}}
-									style={styles.button}
-									icon='camera'
-									disabled={loading || cameraActive || takePictureActive}
-									accessibilityRole='button'
-									labelStyle={{ color: 'white' }}>
-									Otwórz aparat
-								</Button>
+
 								<Button
 									mode='contained'
 									onPress={() => {
@@ -1605,7 +1579,7 @@ const styles = StyleSheet.create({
 		fontWeight: 'bold',
 		color: '#333',
 		marginBottom: 10,
-		textAlign: 'left',
+		textAlign: 'center',
 		paddingLeft: 5,
 	},
 	responseRow: {
