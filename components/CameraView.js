@@ -4,15 +4,7 @@ import { Camera as VisionCamera } from 'react-native-vision-camera'
 
 const { width } = Dimensions.get('window')
 
-const CameraView = memo(({ cameraRef, device, isActive, onInitialized }) => {
-	if (!device) {
-		return (
-			<View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-				<Text>Ładowanie kamery...</Text>
-			</View>
-		)
-	}
-
+const CameraView = memo(({ cameraRef, device, isActive, onInitialized, onStarted }) => {
 	return (
 		<VisionCamera
 			style={[styles.camera, { position: 'relative' }]}
@@ -21,6 +13,7 @@ const CameraView = memo(({ cameraRef, device, isActive, onInitialized }) => {
 			isActive={isActive}
 			photo={true}
 			onInitialized={onInitialized}
+			onStarted={onStarted}
 			onError={e => {
 				console.error('Camera init error', e)
 			}}

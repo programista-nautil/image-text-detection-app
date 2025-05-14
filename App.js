@@ -60,6 +60,7 @@ export default function App() {
 	const [isCameraInitialized, setIsCameraInitialized] = useState(false)
 	const isDetectionRunningRef = useRef(false)
 	const [recordId, setRecordId] = useState(null)
+	const [isCameraReadyForUse, setIsCameraReadyForUse] = useState(false)
 	//const endpointUrl = 'https://debogorze.pl'
 	const endpointUrl = 'http://192.168.0.139:8000'
 
@@ -147,10 +148,15 @@ export default function App() {
 	}, [response, detectionMode])
 
 	useEffect(() => {
-		if (detectionMode === 'car' && cameraActive && isCameraInitialized) {
-			startCarDetectionLoop() // Rozpocznij robienie zdjęć w trybie car
+		if (detectionMode === 'car' && cameraActive && isCameraInitialized && isCameraReadyForUse) {
+			console.log(cameraRef)
+			console.log('Startuję detekcję, kamera w pełni gotowa')
+			const timeout = setTimeout(() => {
+				startCarDetectionLoop()
+			}, 1200) // pozwól refowi się przypisać
+			return () => clearTimeout(timeout)
 		}
-	}, [detectionMode, cameraActive, isCameraInitialized])
+	}, [detectionMode, cameraActive, isCameraInitialized, isCameraReadyForUse])
 
 	useEffect(() => {
 		const resetRecordIdOnStart = async () => {
@@ -648,7 +654,13 @@ export default function App() {
 	let markerTimeoutRef = null
 
 	const startCarDetectionLoop = async () => {
-		if (!cameraRef.current || !isCameraInitialized || !cameraActive || isDetectionRunning) {
+		if (
+			!cameraRef.current ||
+			!isCameraInitialized ||
+			!cameraActive ||
+			isDetectionRunning ||
+			!cameraRef.current.isNativeViewMounted
+		) {
 			console.log('Camera not initialized, active, or detection already running')
 			return
 		}
@@ -1173,17 +1185,21 @@ export default function App() {
 							</View>
 						</>
 					)}
-					{cameraActive ? (
+					{cameraActive && device ? (
 						<>
 							<View>
-								{cameraActive && device && detectionMode === 'car' && (
-									<CameraView
-										cameraRef={cameraRef}
-										device={device}
-										isActive={true}
-										onInitialized={() => setIsCameraInitialized(true)}
-									/>
-								)}
+								<CameraView
+									cameraRef={cameraRef}
+									device={device}
+									isActive={cameraActive}
+									onInitialized={() => {
+										setIsCameraInitialized(true)
+										//setTimeout(() => setIsCameraReadyForUse(true), 300) // daje czas na montaż natywnego widoku
+									}}
+									onStarted={() => {
+										setTimeout(() => setIsCameraReadyForUse(true), 300)
+									}}
+								/>
 
 								{objectDetection &&
 									Platform.OS === 'ios' &&
