@@ -148,17 +148,6 @@ export default function App() {
 	}, [response, detectionMode])
 
 	useEffect(() => {
-		if (detectionMode === 'car' && cameraActive && isCameraInitialized && isCameraReadyForUse) {
-			console.log(cameraRef)
-			console.log('Startuję detekcję, kamera w pełni gotowa')
-			const timeout = setTimeout(() => {
-				startCarDetectionLoop()
-			}, 1200) // pozwól refowi się przypisać
-			return () => clearTimeout(timeout)
-		}
-	}, [detectionMode, cameraActive, isCameraInitialized, isCameraReadyForUse])
-
-	useEffect(() => {
 		const resetRecordIdOnStart = async () => {
 			try {
 				await axios.post(new URL('/set_record_id', endpointUrl).href, {
