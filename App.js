@@ -61,8 +61,10 @@ export default function App() {
 	const isDetectionRunningRef = useRef(false)
 	const [recordId, setRecordId] = useState(null)
 	const [isCameraReadyForUse, setIsCameraReadyForUse] = useState(false)
-	//const endpointUrl = 'https://debogorze.pl'
-	const endpointUrl = 'http://192.168.0.139:8000'
+	const [shouldActivateCamera, setShouldActivateCamera] = useState(false)
+
+	const endpointUrl = 'https://debogorze.pl'
+	//const endpointUrl = 'http://192.168.0.139:8000'
 
 	const aspectRatio = 4 / 3
 
@@ -136,13 +138,6 @@ export default function App() {
 	}, [])
 
 	useEffect(() => {
-		if (cameraActive) {
-			// Restart detection whenever the detectionMode changes while the camera is active
-			stopDetection() // Stop the current detection
-		}
-	}, [detectionMode])
-
-	useEffect(() => {
 		if (response) {
 			if (detectionMode === 'microwave' && response.detectedText) {
 				// Odczytaj tekst wykryty w trybie microwave
@@ -175,6 +170,20 @@ export default function App() {
 
 		resetRecordIdOnStart()
 	}, [])
+
+	useEffect(() => {
+		if (detectionMode === 'car' && cameraActive && isCameraInitialized && isCameraReadyForUse) {
+			console.log('device:', device)
+			console.log('isCameraInitialized:', isCameraInitialized)
+			console.log('isCameraReadyForUse:', isCameraReadyForUse)
+			console.log(cameraRef)
+			console.log('Startuję detekcję, kamera w pełni gotowa')
+			const timeout = setTimeout(() => {
+				startCarDetectionLoop()
+			}, 1200) // pozwól refowi się przypisać
+			return () => clearTimeout(timeout)
+		}
+	}, [detectionMode, cameraActive, isCameraInitialized, isCameraReadyForUse])
 
 	if (!device)
 		return (
@@ -674,12 +683,13 @@ export default function App() {
 		const detectionInterval = async () => {
 			try {
 				console.log('zaczynam znowu')
-				if (!cameraRef.current || !cameraActive) {
+				if (!cameraRef.current || !cameraActive || !isCameraInitialized || !isCameraReadyForUse) {
 					console.log('Camera reference is null or camera is not active, stopping detection loop')
 					return
 				}
 
 				const photo = await cameraRef.current.takePhoto({ flash: 'off' })
+
 				const selectedImage = `file://${photo.path}`
 				setImage(selectedImage)
 
@@ -959,6 +969,9 @@ export default function App() {
 		if (carDetectionMode) {
 			deactivateKeepAwake()
 			setCarDetectionMode(false)
+			setShouldActivateCamera(false)
+			setIsCameraReadyForUse(false)
+			setIsCameraInitialized(false)
 		}
 		Speech.stop()
 		clearInterval(detectionIntervalRef.current)
@@ -1154,10 +1167,12 @@ export default function App() {
 								<CameraView
 									cameraRef={cameraRef}
 									device={device}
-									isActive={cameraActive}
+									isActive={shouldActivateCamera} // <- kontrolowany flagą!
 									onInitialized={() => {
 										setIsCameraInitialized(true)
-										//setTimeout(() => setIsCameraReadyForUse(true), 300) // daje czas na montaż natywnego widoku
+										console.log('Camera initialized')
+										// 🔓 Odblokuj aktywację
+										setShouldActivateCamera(true)
 									}}
 									onStarted={() => {
 										setTimeout(() => setIsCameraReadyForUse(true), 300)
