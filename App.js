@@ -37,7 +37,7 @@ export default function App() {
 	const [cameraActive, setCameraActive] = useState(false)
 	const { hasPermission, requestPermission } = useCameraPermission()
 	const [detectionMode, setDetectionMode] = useState('car')
-	const [isWeightDetection, setIsWeightDetection] = useState(false)
+	const [isWeightDetection, setIsWeightDetection] = useState(true)
 	const cameraRef = useRef(null)
 	const device = useCameraDevice('back')
 	const detectionIntervalRef = useRef(null)
@@ -259,7 +259,7 @@ export default function App() {
 			case 'all':
 				return 'Tryb wykrywania wszystkich obiektów w czasie rzeczywistym.'
 			case 'car':
-				return 'Tryb wykrywania markera na pojeździe i odczytywania jego numeru rejestracyjnego.'
+				return 'Tryb wykrywania wagi pojazdu.'
 			case 'microwave':
 				return 'Tryb wykrywania markerów i analizy tekstu.'
 			default:
@@ -1054,7 +1054,7 @@ export default function App() {
 						this.scrollView = ref
 					}}
 					onContentSizeChange={() => this.scrollView.scrollToEnd({ animated: true })}>
-					<Text style={styles.modeTitle}>Tryb wykrywania markera</Text>
+					<Text style={styles.modeTitle}>Tryb wykrywania wagi</Text>
 					<Card style={styles.descriptionCard}>
 						<Card.Content>
 							<Text style={styles.descriptionText}>{getDescriptionText()}</Text>
