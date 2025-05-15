@@ -4,7 +4,8 @@ import { Camera as VisionCamera } from 'react-native-vision-camera'
 
 const { width } = Dimensions.get('window')
 
-const CameraView = memo(({ cameraRef, device, isActive, onInitialized, onStarted }) => {
+const CameraView = ({ cameraRef, device, isActive, onInitialized, onStarted }) => {
+	console.log('test')
 	return (
 		<VisionCamera
 			style={[styles.camera, { position: 'relative' }]}
@@ -19,7 +20,7 @@ const CameraView = memo(({ cameraRef, device, isActive, onInitialized, onStarted
 			}}
 		/>
 	)
-})
+}
 
 export default CameraView
 

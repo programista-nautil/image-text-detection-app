@@ -12,7 +12,7 @@ import {
 	findNodeHandle,
 	Platform,
 } from 'react-native'
-import { Camera } from 'expo-camera/legacy'
+
 import * as ImagePicker from 'expo-image-picker'
 import * as Speech from 'expo-speech'
 import axios from 'axios'
@@ -20,11 +20,16 @@ import { Provider as PaperProvider, Button, Card, ActivityIndicator } from 'reac
 import Header from './components/Header'
 import { MaterialIcons } from '@expo/vector-icons'
 import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake'
-import { useCameraDevice, useCameraPermission, useFrameProcessor, runAtTargetFps } from 'react-native-vision-camera'
+import {
+	useCameraDevice,
+	useCameraPermission,
+	useFrameProcessor,
+	runAtTargetFps,
+	Camera as VisionCamera,
+} from 'react-native-vision-camera'
 import { useSharedValue, runOnJS } from 'react-native-reanimated'
 import { crop } from 'vision-camera-cropper'
 import { useRunOnJS } from 'react-native-worklets-core'
-import CameraView from './components/CameraView'
 import uuid from 'react-native-uuid'
 
 export default function App() {
@@ -63,8 +68,8 @@ export default function App() {
 	const [isCameraReadyForUse, setIsCameraReadyForUse] = useState(false)
 	const [shouldActivateCamera, setShouldActivateCamera] = useState(false)
 
-	const endpointUrl = 'https://debogorze.pl'
-	//const endpointUrl = 'http://192.168.0.139:8000'
+	//const endpointUrl = 'https://debogorze.pl'
+	const endpointUrl = 'http://192.168.0.139:8000'
 
 	const aspectRatio = 4 / 3
 
@@ -89,7 +94,13 @@ export default function App() {
 	}
 
 	useEffect(() => {
-		if (detectionMode === 'car' && cameraActive && isCameraInitialized && isCameraReadyForUse) {
+		if (
+			detectionMode === 'car' &&
+			cameraActive &&
+			isCameraInitialized &&
+			isCameraReadyForUse &&
+			!isDetectionRunningRef.current
+		) {
 			console.log('Startuję detekcję, kamera w pełni gotowa')
 			const timeout = setTimeout(() => {
 				startCarDetectionLoop()
@@ -173,10 +184,8 @@ export default function App() {
 
 	useEffect(() => {
 		if (detectionMode === 'car' && cameraActive && isCameraInitialized && isCameraReadyForUse) {
-			console.log('device:', device)
 			console.log('isCameraInitialized:', isCameraInitialized)
 			console.log('isCameraReadyForUse:', isCameraReadyForUse)
-			console.log(cameraRef)
 			console.log('Startuję detekcję, kamera w pełni gotowa')
 			const timeout = setTimeout(() => {
 				startCarDetectionLoop()
@@ -672,7 +681,10 @@ export default function App() {
 			console.log('Camera not initialized, active, or detection already running')
 			return
 		}
-
+		if (isDetectionRunningRef.current) {
+			console.log('Loop already running, skipping')
+			return
+		}
 		isDetectionRunningRef.current = true
 		setIsDetectionRunning(true)
 		console.log('Starting car detection loop')
@@ -1134,12 +1146,12 @@ export default function App() {
 					{takePictureActive && (
 						<>
 							<View>
-								<CameraView
+								{/* <CameraView
 									cameraRef={cameraRef}
 									device={device}
 									isActive={true}
 									onInitialized={() => setIsCameraInitialized(true)}
-								/>
+								/> */}
 								<TouchableOpacity
 									style={styles.closeButton}
 									onPress={stopDetection}
@@ -1161,43 +1173,46 @@ export default function App() {
 							</View>
 						</>
 					)}
+					<View>
+						<VisionCamera
+							style={[styles.camera, { position: 'relative' }]}
+							ref={cameraRef}
+							device={device}
+							isActive={shouldActivateCamera}
+							photo={true}
+							onInitialized={() => {
+								setIsCameraInitialized(true)
+								console.log('Camera initialized')
+								// 🔓 Odblokuj aktywację
+								setShouldActivateCamera(true)
+							}}
+							onStarted={() => {
+								setTimeout(() => setIsCameraReadyForUse(true), 300)
+							}}
+							onError={e => {
+								console.error('Camera init error', e)
+							}}
+						/>
+						{objectDetection &&
+							Platform.OS === 'ios' &&
+							objectDetection.slice(0, detectionMode === 'all' ? 4 : 1).map((obj, index) => (
+								<View key={index} style={[styles.box, scaleBox(obj.box)]}>
+									<View style={styles.labelContainer}>
+										<Text style={styles.label}>{obj.name}</Text>
+									</View>
+								</View>
+							))}
+
+						{/* <TouchableOpacity
+							style={styles.closeButton}
+							onPress={stopDetection}
+							accessibilityLabel='Wyłącz aparat'
+							accessibilityRole='button'>
+							<MaterialIcons name='close' size={24} color='white' />
+						</TouchableOpacity> */}
+					</View>
 					{cameraActive && device ? (
-						<>
-							<View>
-								<CameraView
-									cameraRef={cameraRef}
-									device={device}
-									isActive={shouldActivateCamera} // <- kontrolowany flagą!
-									onInitialized={() => {
-										setIsCameraInitialized(true)
-										console.log('Camera initialized')
-										// 🔓 Odblokuj aktywację
-										setShouldActivateCamera(true)
-									}}
-									onStarted={() => {
-										setTimeout(() => setIsCameraReadyForUse(true), 300)
-									}}
-								/>
-
-								{objectDetection &&
-									Platform.OS === 'ios' &&
-									objectDetection.slice(0, detectionMode === 'all' ? 4 : 1).map((obj, index) => (
-										<View key={index} style={[styles.box, scaleBox(obj.box)]}>
-											<View style={styles.labelContainer}>
-												<Text style={styles.label}>{obj.name}</Text>
-											</View>
-										</View>
-									))}
-
-								<TouchableOpacity
-									style={styles.closeButton}
-									onPress={stopDetection}
-									accessibilityLabel='Wyłącz aparat'
-									accessibilityRole='button'>
-									<MaterialIcons name='close' size={24} color='white' />
-								</TouchableOpacity>
-							</View>
-						</>
+						<></>
 					) : image && imageSize.width > 0 && imageSize.height > 0 ? (
 						<>
 							<View style={styles.imageContainer}>
@@ -1287,12 +1302,7 @@ export default function App() {
 							)}
 						</>
 					) : (
-						!cameraActive &&
-						!takePictureActive && (
-							<View style={styles.imagePlaceholder}>
-								<Text style={styles.placeholderText}>Nie dodano jeszcze zdjęcia</Text>
-							</View>
-						)
+						<></>
 					)}
 					{loading && (
 						<ActivityIndicator animating={true} size='large' style={styles.activityIndicator} color='#4682B4' />
@@ -1621,5 +1631,12 @@ const styles = StyleSheet.create({
 		backgroundColor: 'rgba(0,0,0,0.5)',
 		borderRadius: 25,
 		padding: 10,
+	},
+	camera: {
+		width: width - 40, // Szerokość kamery
+		height: ((width - 40) * 3.5) / 3, // Wysokość kamery z zachowaniem proporcji
+		borderRadius: 15,
+		overflow: 'hidden',
+		alignSelf: 'center', // Wyśrodkuj kamerę w kontenerze
 	},
 })
