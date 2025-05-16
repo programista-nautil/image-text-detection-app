@@ -68,8 +68,8 @@ export default function App() {
 	const [isCameraReadyForUse, setIsCameraReadyForUse] = useState(false)
 	const [shouldActivateCamera, setShouldActivateCamera] = useState(false)
 
-	//const endpointUrl = 'https://debogorze.pl'
-	const endpointUrl = 'http://192.168.0.139:8000'
+	const endpointUrl = 'https://debogorze.pl'
+	//const endpointUrl = 'http://192.168.0.139:8000'
 
 	const aspectRatio = 4 / 3
 
