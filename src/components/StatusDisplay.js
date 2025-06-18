@@ -5,18 +5,26 @@ import { ActivityIndicator, Card } from 'react-native-paper'
 import { useRecordStore, STATUS } from '../store/useRecordStore'
 
 export function StatusDisplay() {
-	const { status, error, lastResult, isWeightDetection, recordId, weight } = useRecordStore()
+	const { status, error, lastResult, isWeightDetection, isProcessing, recordId, weight } = useRecordStore()
 
 	const getDescription = () => {
-		if (status === STATUS.PROCESSING) return 'Przetwarzanie obrazu...'
+		// Najpierw sprawdzamy stany końcowe lub błędy
 		if (status === STATUS.ERROR) return `Błąd: ${error}`
-		if (status === STATUS.SUCCESS) return `Wynik: ${lastResult}`
-		if (status === STATUS.CAMERA_ACTIVE)
-			return isWeightDetection ? 'Skieruj aparat na wagę.' : 'Skieruj aparat na marker.'
+		if (status === STATUS.SUCCESS) return `Sukces: ${lastResult}`
 
+		// ### ZMIANA ZACZYNA SIĘ TUTAJ ###
+		// Priorytet: Jeśli mamy już wagę i czekamy na marker, ZAWSZE to pokazuj.
 		if (recordId && weight) {
 			return `Ostatnia waga: ${weight}. Oczekuję na marker...`
 		}
+
+		// Jeśli nie mamy jeszcze wyniku, pokazujemy status kamery
+		if (status === STATUS.CAMERA_ACTIVE) {
+			if (isProcessing) return 'Przetwarzanie obrazu...'
+			if (lastResult) return lastResult // Pokazuje np. "Nie wykryto wagi..."
+			return 'Kamera aktywna, skanowanie...'
+		}
+		// ### ZMIANA KOŃCZY SIĘ TUTAJ ###
 
 		return 'Wybierz tryb i uruchom aparat.'
 	}
@@ -24,7 +32,7 @@ export function StatusDisplay() {
 	return (
 		<Card style={styles.descriptionCard}>
 			<Card.Content>
-				{status === STATUS.PROCESSING && (
+				{isProcessing && (
 					<ActivityIndicator animating={true} size='small' color='#4682B4' style={{ marginRight: 10 }} />
 				)}
 				<Text style={styles.descriptionText}>{getDescription()}</Text>
