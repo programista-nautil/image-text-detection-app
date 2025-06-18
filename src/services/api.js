@@ -20,6 +20,17 @@ const detectAndSave = async payload => {
 	}
 }
 
+const getWaitingRecord = async () => {
+	try {
+		const response = await apiClient.get('/record/waiting')
+		return response.data
+	} catch (error) {
+		console.error('API call /record/waiting failed:', error)
+		throw error
+	}
+}
+
 export default {
 	detectAndSave,
+	getWaitingRecord,
 }

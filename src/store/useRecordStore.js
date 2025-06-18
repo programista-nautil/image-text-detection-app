@@ -6,6 +6,7 @@ const STATUS = {
 	CAMERA_ACTIVE: 'camera_active', // Kamera jest aktywna
 	SUCCESS: 'success', // Sukces, wyświetlanie wyników
 	ERROR: 'error', // Wystąpił błąd
+	POLLING: 'polling',
 }
 
 export const useRecordStore = create((set, get) => ({
@@ -19,20 +20,40 @@ export const useRecordStore = create((set, get) => ({
 	weight: null,
 
 	// --- AKCJE (ACTIONS) ---
-	setDetectionMode: isWeight =>
+	setDetectionMode: isWeight => {
+		const nextStatus = isWeight ? STATUS.IDLE : STATUS.POLLING
 		set({
 			isWeightDetection: isWeight,
-			status: STATUS.IDLE,
+			status: nextStatus,
 			isProcessing: false,
 			recordId: null,
 			weight: null,
 			error: null,
-			lastResult: null,
-		}),
+			lastResult: isWeight ? null : 'Oczekuję na sygnał od wagi...',
+		})
+	},
 
 	startCamera: () => set({ status: STATUS.CAMERA_ACTIVE, error: null, lastResult: null }),
 
-	stopCamera: () => set({ status: STATUS.IDLE, isProcessing: false }),
+	stopCamera: () => {
+		const { isWeightDetection } = get()
+		// Po zatrzymaniu kamery wróć do odpowiedniego stanu
+		const nextStatus = isWeightDetection ? STATUS.IDLE : STATUS.POLLING
+		set({
+			status: nextStatus,
+			isProcessing: false,
+			lastResult: isWeightDetection ? get().lastResult : 'Oczekuję na sygnał od wagi...',
+		})
+	},
+
+	startMarkerDetection: recordData => {
+		set({
+			status: STATUS.CAMERA_ACTIVE,
+			recordId: recordData.recordId,
+			weight: recordData.weight,
+			lastResult: `Wykryto pracę! Waga: ${recordData.weight}. Szukam markera...`,
+		})
+	},
 
 	processImage: async base64Image => {
 		if (get().isProcessing) {
@@ -41,7 +62,7 @@ export const useRecordStore = create((set, get) => ({
 
 		set({ isProcessing: true, error: null })
 
-		const { isWeightDetection, recordId } = get()
+		const { isWeightDetection, recordId, lastResult: currentLastResult } = get()
 
 		try {
 			const payload = {
@@ -70,13 +91,26 @@ export const useRecordStore = create((set, get) => ({
 						recordId: null,
 						weight: null,
 					})
+					setTimeout(() => {
+						// Sprawdź, czy w międzyczasie użytkownik nie zmienił trybu
+						const { isWeightDetection: stillInMarkerMode } = get()
+						if (!stillInMarkerMode) {
+							set({
+								status: STATUS.POLLING,
+								lastResult: 'Gotowy. Oczekuję na sygnał od wagi...',
+							})
+						}
+					}, 30000) // 30 sekund (30000 ms)
 					break
 
 				case 'No weight detected':
 				case 'Weight ignored (not greater)':
 				case 'No marker detected':
 				case 'No valid marker detected':
-					set({ lastResult: response.message || 'Skanuję dalej...' })
+					const message = response.message || 'Skanuję dalej...'
+					if (message !== currentLastResult) {
+						set({ lastResult: message })
+					}
 					break
 
 				case 'ignored':

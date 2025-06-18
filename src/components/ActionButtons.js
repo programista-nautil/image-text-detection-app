@@ -4,9 +4,13 @@ import { Button } from 'react-native-paper'
 import { useRecordStore, STATUS } from '../store/useRecordStore'
 
 export function ActionButtons() {
-	const { status, startCamera, stopCamera } = useRecordStore()
+	const { status, startCamera, stopCamera, isWeightDetection } = useRecordStore()
 	const isCameraActive = status === STATUS.CAMERA_ACTIVE
-	const isLoading = status === STATUS.PROCESSING
+	const isProcessing = status === 'processing'
+
+	if (!isWeightDetection) {
+		return null
+	}
 
 	return (
 		<View style={styles.buttonContainer}>
@@ -25,7 +29,7 @@ export function ActionButtons() {
 					onPress={startCamera}
 					style={styles.button}
 					icon='camera'
-					disabled={isLoading}
+					disabled={isProcessing}
 					labelStyle={{ color: 'white' }}>
 					Uruchom kamerę
 				</Button>

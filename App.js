@@ -7,9 +7,12 @@ import { ModeSelector } from './src/components/ModeSelector'
 import { StatusDisplay } from './src/components/StatusDisplay'
 import { ActionButtons } from './src/components/ActionButtons'
 import { CameraManager } from './src/components/CameraManager'
+import { useMarkerPolling } from './src/hooks/useMarkerPolling'
 
 export default function App() {
 	const { hasPermission, requestPermission } = useCameraPermission()
+
+	useMarkerPolling()
 
 	useEffect(() => {
 		if (!hasPermission) {
