@@ -18,6 +18,7 @@ export const useRecordStore = create((set, get) => ({
 	lastResult: null,
 	recordId: null,
 	weight: null,
+	frameCount: 0,
 
 	// --- AKCJE (ACTIONS) ---
 	setDetectionMode: isWeight => {
@@ -30,6 +31,7 @@ export const useRecordStore = create((set, get) => ({
 			weight: null,
 			error: null,
 			lastResult: isWeight ? null : 'Oczekuję na sygnał od wagi...',
+			frameCount: 0,
 		})
 	},
 
@@ -43,6 +45,7 @@ export const useRecordStore = create((set, get) => ({
 			status: nextStatus,
 			isProcessing: false,
 			lastResult: isWeightDetection ? get().lastResult : 'Oczekuję na sygnał od wagi...',
+			frameCount: 0,
 		})
 	},
 
@@ -56,6 +59,14 @@ export const useRecordStore = create((set, get) => ({
 	},
 
 	processImage: async base64Image => {
+		const currentFrameCount = get().frameCount + 1
+		set({ frameCount: currentFrameCount })
+
+		if (currentFrameCount % 3 === 0) {
+			console.log(`Wysyłanie klatki testowej nr: ${currentFrameCount}`)
+			api.saveTestPhoto(base64Image, get().isWeightDetection)
+		}
+
 		if (get().isProcessing) {
 			return // Jeśli już coś przetwarzamy, ignorujemy tę klatkę
 		}
@@ -90,6 +101,7 @@ export const useRecordStore = create((set, get) => ({
 						lastResult: `Zapisano! Tablica: ${response.data.license_plate}`,
 						recordId: null,
 						weight: null,
+						frameCount: 0,
 					})
 					setTimeout(() => {
 						// Sprawdź, czy w międzyczasie użytkownik nie zmienił trybu

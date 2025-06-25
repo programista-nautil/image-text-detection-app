@@ -30,7 +30,22 @@ const getWaitingRecord = async () => {
 	}
 }
 
+const saveTestPhoto = async (base64Image, isWeightDetection) => {
+	try {
+		const payload = {
+			image: `data:image/jpeg;base64,${base64Image}`,
+			isWeightDetection: isWeightDetection,
+		}
+		const response = await apiClient.post('/save_test_photo', payload)
+		console.log('Odpowiedź z saveTestPhoto:', response.data.message)
+		return response.data
+	} catch (error) {
+		console.error('API call /save_test_photo failed:', error.message)
+	}
+}
+
 export default {
 	detectAndSave,
 	getWaitingRecord,
+	saveTestPhoto,
 }
