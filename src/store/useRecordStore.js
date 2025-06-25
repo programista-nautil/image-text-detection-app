@@ -7,6 +7,7 @@ const STATUS = {
 	SUCCESS: 'success', // Sukces, wyświetlanie wyników
 	ERROR: 'error', // Wystąpił błąd
 	POLLING: 'polling',
+	COOLDOWN: 'cooldown',
 }
 
 export const useRecordStore = create((set, get) => ({
@@ -84,11 +85,25 @@ export const useRecordStore = create((set, get) => ({
 
 			const response = await api.detectAndSave(payload)
 
+			if (response.status === 'cooldown') {
+				set({
+					status: STATUS.COOLDOWN,
+					lastResult: response.message || 'Zapisano! 60s przerwy.',
+					isProcessing: false,
+				})
+				setTimeout(() => {
+					const { isWeightDetection: mode } = get()
+					const nextStatus = mode ? STATUS.CAMERA_ACTIVE : STATUS.POLLING
+					const nextResult = mode ? 'Skanowanie wagi wznowione...' : 'Oczekuję na sygnał od wagi...'
+					set({ status: nextStatus, lastResult: nextResult })
+				}, 60000)
+				return
+			}
+
 			switch (response.status) {
 				case 'Weight detected, new record created':
 				case 'Weight updated':
 					set({
-						// status pozostaje CAMERA_ACTIVE
 						recordId: response.data.record_id,
 						weight: response.data.weight,
 						lastResult: `Waga: ${response.data.weight}`,
@@ -97,22 +112,15 @@ export const useRecordStore = create((set, get) => ({
 
 				case 'Data saved to Google Sheets':
 					set({
-						status: STATUS.SUCCESS,
-						lastResult: `Zapisano! Tablica: ${response.data.license_plate}`,
+						status: STATUS.COOLDOWN,
+						lastResult: `Zapisano! ${response.data.license_plate}. 60s przerwy.`,
 						recordId: null,
 						weight: null,
 						frameCount: 0,
 					})
 					setTimeout(() => {
-						// Sprawdź, czy w międzyczasie użytkownik nie zmienił trybu
-						const { isWeightDetection: stillInMarkerMode } = get()
-						if (!stillInMarkerMode) {
-							set({
-								status: STATUS.POLLING,
-								lastResult: 'Gotowy. Oczekuję na sygnał od wagi...',
-							})
-						}
-					}, 30000) // 30 sekund (30000 ms)
+						set({ status: STATUS.POLLING, lastResult: 'Oczekuję na sygnał od wagi...', error: null })
+					}, 60000)
 					break
 
 				case 'No weight detected':
