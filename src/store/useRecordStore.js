@@ -20,9 +20,15 @@ export const useRecordStore = create((set, get) => ({
 	recordId: null,
 	weight: null,
 	frameCount: 0,
+	cameraStartTimer: null,
 
 	// --- AKCJE (ACTIONS) ---
 	setDetectionMode: isWeight => {
+		const existingTimer = get().cameraStartTimer
+		if (existingTimer) {
+			clearTimeout(existingTimer)
+		}
+
 		const nextStatus = isWeight ? STATUS.IDLE : STATUS.POLLING
 		set({
 			isWeightDetection: isWeight,
@@ -31,9 +37,21 @@ export const useRecordStore = create((set, get) => ({
 			recordId: null,
 			weight: null,
 			error: null,
-			lastResult: isWeight ? null : 'Oczekuję na sygnał od wagi...',
+			lastResult: isWeight ? 'Kamera uruchomi się za 10 sekund...' : 'Oczekuję na sygnał od wagi...',
 			frameCount: 0,
+			cameraStartTimer: null,
 		})
+
+		if (isWeight) {
+			const newTimer = setTimeout(() => {
+				if (get().isWeightDetection) {
+					console.log('Automatyczne uruchamianie kamery w trybie Wagi...')
+					get().startCamera()
+				}
+			}, 10000)
+
+			set({ cameraStartTimer: newTimer })
+		}
 	},
 
 	startCamera: () => set({ status: STATUS.CAMERA_ACTIVE, error: null, lastResult: null }),

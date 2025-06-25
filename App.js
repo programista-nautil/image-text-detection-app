@@ -8,6 +8,7 @@ import { StatusDisplay } from './src/components/StatusDisplay'
 import { ActionButtons } from './src/components/ActionButtons'
 import { CameraManager } from './src/components/CameraManager'
 import { useMarkerPolling } from './src/hooks/useMarkerPolling'
+import { useRecordStore } from './src/store/useRecordStore'
 
 export default function App() {
 	const { hasPermission, requestPermission } = useCameraPermission()
@@ -19,6 +20,18 @@ export default function App() {
 			requestPermission()
 		}
 	}, [hasPermission, requestPermission])
+
+	useEffect(() => {
+		const { setDetectionMode } = useRecordStore.getState()
+		setDetectionMode(true)
+
+		return () => {
+			const { cameraStartTimer } = useRecordStore.getState()
+			if (cameraStartTimer) {
+				clearTimeout(cameraStartTimer)
+			}
+		}
+	}, [])
 
 	return (
 		<PaperProvider>
