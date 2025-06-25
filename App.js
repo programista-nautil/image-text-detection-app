@@ -9,6 +9,7 @@ import { ActionButtons } from './src/components/ActionButtons'
 import { CameraManager } from './src/components/CameraManager'
 import { useMarkerPolling } from './src/hooks/useMarkerPolling'
 import { useRecordStore } from './src/store/useRecordStore'
+import { CURRENT_BUILD_MODE, BUILD_MODE } from './config'
 
 export default function App() {
 	const { hasPermission, requestPermission } = useCameraPermission()
@@ -22,11 +23,17 @@ export default function App() {
 	}, [hasPermission, requestPermission])
 
 	useEffect(() => {
-		const { setDetectionMode } = useRecordStore.getState()
-		setDetectionMode(true)
+		const { setDetectionMode, cameraStartTimer } = useRecordStore.getState()
+
+		if (CURRENT_BUILD_MODE === BUILD_MODE.WEIGHT_ONLY) {
+			setDetectionMode(true)
+		} else if (CURRENT_BUILD_MODE === BUILD_MODE.MARKER_ONLY) {
+			setDetectionMode(false)
+		} else {
+			setDetectionMode(true)
+		}
 
 		return () => {
-			const { cameraStartTimer } = useRecordStore.getState()
 			if (cameraStartTimer) {
 				clearTimeout(cameraStartTimer)
 			}

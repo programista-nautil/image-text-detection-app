@@ -2,8 +2,12 @@
 import React from 'react'
 import { View, Text, TouchableOpacity, StyleSheet, useWindowDimensions } from 'react-native'
 import { useRecordStore } from '../store/useRecordStore'
+import { CURRENT_BUILD_MODE, BUILD_MODE } from '../../config'
 
 export function ModeSelector() {
+	if (CURRENT_BUILD_MODE !== BUILD_MODE.TEST) {
+		return null
+	}
 	const { isWeightDetection, setDetectionMode, status } = useRecordStore()
 	const isLoading = status === 'processing'
 	const { width } = useWindowDimensions()
