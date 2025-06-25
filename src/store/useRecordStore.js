@@ -160,11 +160,21 @@ export const useRecordStore = create((set, get) => ({
 					set({ lastResult: 'Otrzymano nieznaną odpowiedź.' })
 			}
 		} catch (err) {
-			const errorMessage = err.response?.data?.error || 'Wystąpił błąd komunikacji z serwerem.'
-			set({ status: STATUS.ERROR, error: errorMessage })
+			const errorMessage = err.response?.data?.error || 'Błąd komunikacji. Próbuję ponownie za 10s...'
+			set({ status: STATUS.ERROR, error: errorMessage, isProcessing: false })
 			console.error('Błąd przetwarzania obrazu:', err)
+
+			setTimeout(() => {
+				if (get().status === STATUS.ERROR) {
+					console.log('Automatyczne wznawianie pracy po błędzie...')
+
+					get().startCamera()
+				}
+			}, 10000) // 10 sekund
 		} finally {
-			set({ isProcessing: false })
+			if (get().status !== STATUS.ERROR) {
+				set({ isProcessing: false })
+			}
 		}
 	},
 }))
