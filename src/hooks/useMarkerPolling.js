@@ -2,6 +2,7 @@
 import { useEffect, useRef } from 'react'
 import { useRecordStore, STATUS } from '../store/useRecordStore'
 import api from '../services/api'
+import logger from '../services/logger'
 
 const POLLING_INTERVAL = 10000
 
@@ -11,15 +12,15 @@ export function useMarkerPolling() {
 
 	useEffect(() => {
 		const pollForRecord = async () => {
-			console.log('Polling for a waiting record...')
+			logger.log('Polling for a waiting record...')
 			try {
 				const data = await api.getWaitingRecord()
 				if (data && data.recordId) {
-					console.log(`Found waiting record: ${data.recordId}`)
+					logger.log(`Found waiting record: ${data.recordId}`)
 					startMarkerDetection(data)
 				}
 			} catch (error) {
-				console.error('Polling failed:', error)
+				logger.error('Polling failed:', error)
 			}
 		}
 

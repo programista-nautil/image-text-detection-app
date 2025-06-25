@@ -5,3 +5,6 @@ export const BUILD_MODE = {
 }
 
 export const CURRENT_BUILD_MODE = BUILD_MODE.TEST
+
+export const API_URL = 'http://192.168.0.139:8000'
+//export const API_URL = 'https://debogorze.pl'

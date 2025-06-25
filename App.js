@@ -10,6 +10,7 @@ import { CameraManager } from './src/components/CameraManager'
 import { useMarkerPolling } from './src/hooks/useMarkerPolling'
 import { useRecordStore } from './src/store/useRecordStore'
 import { CURRENT_BUILD_MODE, BUILD_MODE } from './config'
+import logger from './src/services/logger'
 
 export default function App() {
 	const { hasPermission, requestPermission } = useCameraPermission()
@@ -23,6 +24,7 @@ export default function App() {
 	}, [hasPermission, requestPermission])
 
 	useEffect(() => {
+		logger.init(useRecordStore.getState)
 		const { setDetectionMode, cameraStartTimer } = useRecordStore.getState()
 
 		if (CURRENT_BUILD_MODE === BUILD_MODE.WEIGHT_ONLY) {

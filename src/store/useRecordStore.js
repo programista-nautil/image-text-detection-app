@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import api from '../services/api'
+import logger from '../services/logger'
 
 const STATUS = {
 	IDLE: 'idle', // Aplikacja czeka na akcję
@@ -45,7 +46,7 @@ export const useRecordStore = create((set, get) => ({
 		if (isWeight) {
 			const newTimer = setTimeout(() => {
 				if (get().isWeightDetection) {
-					console.log('Automatyczne uruchamianie kamery w trybie Wagi...')
+					logger.info('Automatyczne uruchamianie kamery w trybie Wagi...')
 					get().startCamera()
 				}
 			}, 10000)
@@ -82,7 +83,7 @@ export const useRecordStore = create((set, get) => ({
 		set({ frameCount: currentFrameCount })
 
 		if (currentFrameCount % 3 === 0) {
-			console.log(`Wysyłanie klatki testowej nr: ${currentFrameCount}`)
+			logger.info(`Wysyłanie klatki testowej nr: ${currentFrameCount}`)
 			api.saveTestPhoto(base64Image, get().isWeightDetection)
 		}
 
@@ -156,17 +157,17 @@ export const useRecordStore = create((set, get) => ({
 					break
 
 				default:
-					console.warn('Nieobsługiwany status odpowiedzi:', response.status)
+					logger.warn('Nieobsługiwany status odpowiedzi:', response.status)
 					set({ lastResult: 'Otrzymano nieznaną odpowiedź.' })
 			}
 		} catch (err) {
 			const errorMessage = err.response?.data?.error || 'Błąd komunikacji. Próbuję ponownie za 10s...'
 			set({ status: STATUS.ERROR, error: errorMessage, isProcessing: false })
-			console.error('Błąd przetwarzania obrazu:', err)
+			logger.error('Błąd przetwarzania obrazu:', err)
 
 			setTimeout(() => {
 				if (get().status === STATUS.ERROR) {
-					console.log('Automatyczne wznawianie pracy po błędzie...')
+					logger.info('Automatyczne wznawianie pracy po błędzie...')
 
 					get().startCamera()
 				}
