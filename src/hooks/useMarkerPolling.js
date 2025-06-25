@@ -12,15 +12,15 @@ export function useMarkerPolling() {
 
 	useEffect(() => {
 		const pollForRecord = async () => {
-			logger.log('Polling for a waiting record...')
+			logger.info('Polling for a waiting record...')
 			try {
 				const data = await api.getWaitingRecord()
 				if (data && data.recordId) {
-					logger.log(`Found waiting record: ${data.recordId}`)
+					logger.info(`Found waiting record: ${data.recordId}`)
 					startMarkerDetection(data)
 				}
 			} catch (error) {
-				logger.error('Polling failed:', error)
+				logger.error(`Polling failed: ${error}`)
 			}
 		}
 

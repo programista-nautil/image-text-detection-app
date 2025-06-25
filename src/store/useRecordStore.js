@@ -157,13 +157,13 @@ export const useRecordStore = create((set, get) => ({
 					break
 
 				default:
-					logger.warn('Nieobsługiwany status odpowiedzi:', response.status)
+					logger.warn(`Nieobsługiwany status odpowiedzi: ${response.status}`)
 					set({ lastResult: 'Otrzymano nieznaną odpowiedź.' })
 			}
 		} catch (err) {
 			const errorMessage = err.response?.data?.error || 'Błąd komunikacji. Próbuję ponownie za 10s...'
 			set({ status: STATUS.ERROR, error: errorMessage, isProcessing: false })
-			logger.error('Błąd przetwarzania obrazu:', err)
+			logger.error(`Błąd przetwarzania obrazu: ${err}`)
 
 			setTimeout(() => {
 				if (get().status === STATUS.ERROR) {
