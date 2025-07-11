@@ -4,7 +4,7 @@ export const BUILD_MODE = {
 	MARKER_ONLY: 'marker_only', // Aplikacja działa wyłącznie jako kamera do markera
 }
 
-export const CURRENT_BUILD_MODE = BUILD_MODE.TEST
+export const CURRENT_BUILD_MODE = BUILD_MODE.WEIGHT_ONLY
 
-export const API_URL = 'http://192.168.0.139:8000'
-//export const API_URL = 'https://debogorze.pl'
+//export const API_URL = 'http://192.168.0.139:8000'
+export const API_URL = 'https://debogorze.pl'

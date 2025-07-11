@@ -21,7 +21,7 @@ export function CameraManager() {
 		frame => {
 			'worklet'
 			const now = Date.now()
-			if (now - lastFrameTime.current > 10000) {
+			if (now - lastFrameTime.current > 15000) {
 				lastFrameTime.current = now
 
 				const result = crop(frame, {

@@ -82,7 +82,7 @@ export const useRecordStore = create((set, get) => ({
 		const currentFrameCount = get().frameCount + 1
 		set({ frameCount: currentFrameCount })
 
-		if (currentFrameCount % 6 === 0) {
+		if (currentFrameCount % 20 === 0) {
 			logger.info(`Wysyłanie klatki testowej nr: ${currentFrameCount}`)
 			api.saveTestPhoto(base64Image, get().isWeightDetection)
 		}
