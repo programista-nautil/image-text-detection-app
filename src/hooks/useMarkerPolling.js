@@ -12,15 +12,15 @@ export function useMarkerPolling() {
 
 	useEffect(() => {
 		const pollForRecord = async () => {
-			logger.info('Polling for a waiting record...')
+			logger.debug('MARKER', 'Odpytuję backend o oczekujący rekord')
 			try {
 				const data = await api.getWaitingRecord()
 				if (data && data.recordId) {
-					logger.info(`Found waiting record: ${data.recordId}`)
+					logger.info('MARKER', 'Backend zgłosił rekord — zaczynam szukać markera', { rekord: data.recordId, waga: data.weight })
 					startMarkerDetection(data)
 				}
 			} catch (error) {
-				logger.error(`Polling failed: ${error}`)
+				logger.error('SIEC', 'Odpytywanie o rekord nieudane', { blad: error?.message || error })
 			}
 		}
 

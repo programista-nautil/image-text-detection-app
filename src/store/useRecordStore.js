@@ -46,7 +46,7 @@ export const useRecordStore = create((set, get) => ({
 		if (isWeight) {
 			const newTimer = setTimeout(() => {
 				if (get().isWeightDetection) {
-					logger.info('Automatyczne uruchamianie kamery w trybie Wagi...')
+					logger.info('KAMERA', 'Automatyczne uruchomienie kamery (tryb Waga)')
 					get().startCamera()
 				}
 			}, 10000)
@@ -83,7 +83,7 @@ export const useRecordStore = create((set, get) => ({
 		set({ frameCount: currentFrameCount })
 
 		if (currentFrameCount % 20 === 0) {
-			logger.info(`Wysyłanie klatki testowej nr: ${currentFrameCount}`)
+			logger.debug('ZDJECIE', 'Wysyłam klatkę kontrolną', { nr: currentFrameCount })
 			api.saveTestPhoto(base64Image, get().isWeightDetection)
 		}
 
@@ -157,17 +157,17 @@ export const useRecordStore = create((set, get) => ({
 					break
 
 				default:
-					logger.warn(`Nieobsługiwany status odpowiedzi: ${response.status}`)
+					logger.warn('SIEC', 'Nieobsługiwany status odpowiedzi z backendu', { status: response.status })
 					set({ lastResult: 'Otrzymano nieznaną odpowiedź.' })
 			}
 		} catch (err) {
 			const errorMessage = err.response?.data?.error || 'Błąd komunikacji. Próbuję ponownie za 10s...'
 			set({ status: STATUS.ERROR, error: errorMessage, isProcessing: false })
-			logger.error(`Błąd przetwarzania obrazu: ${err}`)
+			logger.error('SIEC', 'Błąd przetwarzania/wysyłki obrazu', { blad: err?.message || err })
 
 			setTimeout(() => {
 				if (get().status === STATUS.ERROR) {
-					logger.info('Automatyczne wznawianie pracy po błędzie...')
+					logger.info('KAMERA', 'Automatyczne wznowienie pracy po błędzie')
 
 					get().startCamera()
 				}
