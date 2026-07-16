@@ -8,8 +8,7 @@ export function ModeSelector() {
 	if (CURRENT_BUILD_MODE !== BUILD_MODE.TEST) {
 		return null
 	}
-	const { isWeightDetection, setDetectionMode, status } = useRecordStore()
-	const isLoading = status === 'processing'
+	const { isWeightDetection, setDetectionMode } = useRecordStore()
 	const { width } = useWindowDimensions()
 	const isSmallScreen = width < 400
 
@@ -22,17 +21,15 @@ export function ModeSelector() {
 				<TouchableOpacity
 					style={[styles.modeButton, isWeightDetection ? styles.selectedMode : styles.unselectedMode]}
 					onPress={() => setDetectionMode(true)}
-					disabled={isLoading}
 					accessibilityRole='button'
-					accessibilityState={{ selected: isWeightDetection, disabled: isLoading }}>
+					accessibilityState={{ selected: isWeightDetection }}>
 					<Text style={[styles.modeButtonText, isWeightDetection && styles.selectedModeText]}>Waga</Text>
 				</TouchableOpacity>
 				<TouchableOpacity
 					style={[styles.modeButton, !isWeightDetection ? styles.selectedMode : styles.unselectedMode]}
 					onPress={() => setDetectionMode(false)}
-					disabled={isLoading}
 					accessibilityRole='button'
-					accessibilityState={{ selected: !isWeightDetection, disabled: isLoading }}>
+					accessibilityState={{ selected: !isWeightDetection }}>
 					<Text style={[styles.modeButtonText, !isWeightDetection && styles.selectedModeText]}>Marker</Text>
 				</TouchableOpacity>
 			</View>

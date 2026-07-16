@@ -10,7 +10,6 @@ export function StatusDisplay() {
 	const getDescription = () => {
 		// Najpierw sprawdzamy stany końcowe lub błędy
 		if (status === STATUS.ERROR) return `Błąd: ${error}`
-		if (status === STATUS.SUCCESS) return `Sukces: ${lastResult}`
 
 		// ### ZMIANA ZACZYNA SIĘ TUTAJ ###
 		// Priorytet: Jeśli mamy już wagę i czekamy na marker, ZAWSZE to pokazuj.

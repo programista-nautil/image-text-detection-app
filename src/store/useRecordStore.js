@@ -5,7 +5,6 @@ import logger from '../services/logger'
 const STATUS = {
 	IDLE: 'idle', // Aplikacja czeka na akcję
 	CAMERA_ACTIVE: 'camera_active', // Kamera jest aktywna
-	SUCCESS: 'success', // Sukces, wyświetlanie wyników
 	ERROR: 'error', // Wystąpił błąd
 	POLLING: 'polling',
 	COOLDOWN: 'cooldown',
