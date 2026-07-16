@@ -4,6 +4,7 @@ import { Provider as PaperProvider } from 'react-native-paper'
 import { useCameraPermission } from 'react-native-vision-camera'
 import Header from './components/Header' // Używamy starego komponentu nagłówka
 import { ModeSelector } from './src/components/ModeSelector'
+import { TestEmitter } from './src/components/TestEmitter'
 import { StatusDisplay } from './src/components/StatusDisplay'
 import { ActionButtons } from './src/components/ActionButtons'
 import { CameraManager } from './src/components/CameraManager'
@@ -48,6 +49,7 @@ export default function App() {
 				<Header />
 				<ScrollView contentContainerStyle={styles.content}>
 					<ModeSelector />
+					<TestEmitter />
 					<StatusDisplay />
 					<ActionButtons />
 					<CameraManager />
