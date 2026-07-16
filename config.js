@@ -4,7 +4,8 @@ export const BUILD_MODE = {
 	MARKER_ONLY: 'marker_only', // Aplikacja działa wyłącznie jako kamera do markera
 }
 
-export const CURRENT_BUILD_MODE = BUILD_MODE.MARKER_ONLY
+export const CURRENT_BUILD_MODE = BUILD_MODE.TEST
 
-//export const API_URL = 'http://192.168.0.139:8000'
-export const API_URL = 'https://debogorze.pl'
+// Produkcja (backend na VPS, HTTPS). Do testów na LAN podmień na adres swojego
+// komputera z `ipconfig`, np. 'http://192.168.1.2:8000' (musi być ta sama sieć Wi-Fi).
+export const API_URL = 'https://zwirownia.nautil.pl'
